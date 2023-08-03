@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 from requests.exceptions import HTTPError
 
-from src.data_io.data_fetcher.base_data_fetcher import BaseDataFetcher
+from src.data_io.data_fetcher.base_fetcher_adaptor import BaseDataFetcher
 
 
 class YahooFinanceAdaptor(BaseDataFetcher):

@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from src.data_io.data_fetcher.yfinance_data_adaptor import YahooFinanceAdaptor
+from src.data_io.data_fetcher.yfinance_fetch_adaptor import YahooFinanceAdaptor
 
 def test__extract_fetch_stock_and_time_range_params():
     adaptor = YahooFinanceAdaptor()

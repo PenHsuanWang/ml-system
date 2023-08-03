@@ -1,7 +1,7 @@
 import pandas as pd
 from os import path
 
-from src.data_io.data_fetcher.base_data_fetcher import BaseDataFetcher
+from src.data_io.data_fetcher.base_fetcher_adaptor import BaseDataFetcher
 
 
 class LocalFileAdaptor(BaseDataFetcher):

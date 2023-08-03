@@ -1,10 +1,10 @@
 import pandas as pd
 import pytest
 from unittest.mock import patch
-from src.data_io.data_fetcher.local_file_data_adaptor import LocalFileAdaptor
+from src.data_io.data_fetcher.local_file_fetch_adaptor import LocalFileAdaptor
 
 
-@patch("src.data_io.data_fetcher.local_file_data_adaptor.LocalFileAdaptor._check_fetched_data_is_valid")
+@patch("src.data_io.data_fetcher.local_file_fetch_adaptor.LocalFileAdaptor._check_fetched_data_is_valid")
 @patch("pandas.read_csv")
 @patch("pandas.read_excel")
 @patch("pandas.read_json")
@@ -65,7 +65,7 @@ def test_fetch_from_source(mock_exists, mock_read_json, mock_read_excel, mock_re
     #     adaptor.fetch_from_source(file_path="unsupported_format.unknown")
     #     assert adaptor._fetched_data.equals(mock_df)
 
-@patch("src.data_io.data_fetcher.local_file_data_adaptor.LocalFileAdaptor._check_fetched_data_is_valid")
+@patch("src.data_io.data_fetcher.local_file_fetch_adaptor.LocalFileAdaptor._check_fetched_data_is_valid")
 @patch("pandas.read_csv")
 @patch("pandas.read_excel")
 @patch("pandas.read_json")
@@ -80,7 +80,7 @@ def test_file_not_exist(mock_exists, mock_read_json, mock_read_excel, mock_read_
         adaptor.fetch_from_source(file_path="not_exist_path.csv")
 
 
-@patch("src.data_io.data_fetcher.local_file_data_adaptor.LocalFileAdaptor._check_fetched_data_is_valid")
+@patch("src.data_io.data_fetcher.local_file_fetch_adaptor.LocalFileAdaptor._check_fetched_data_is_valid")
 @patch("pandas.read_csv")
 @patch("pandas.read_excel")
 @patch("pandas.read_json")
