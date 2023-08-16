@@ -84,8 +84,8 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         x_train, y_train = np.array(x_train), np.array(y_train)
         x_test, y_test = np.array(x_test), np.array(y_test)
 
-        y_train = y_train.reshape(-1, 1)
-        y_test = y_test.reshape(-1, 1)
+        y_train = np.reshape(y_train, (y_train.shape[0], y_train.shape[1]))
+        y_test = np.reshape(y_test, (y_test.shape[0], y_test.shape[1]))
 
         # convert the numpy array to pytorch tensor.
         # assign the tensor to object field.
@@ -120,15 +120,23 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
     def _sliding_window_mask(self, input_array: np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
-        Internal function to create sliding window mask for training and testing set.
-        :param input_array:
-        :return:
+        Sliding window mask on provided data, return training data and target data,
         """
         x = []
         y = []
-        for i in range(len(input_array) - self._training_window_size - self._target_window_size):
-            x.append(input_array[i:i + self._training_window_size])
-            y.append(input_array[
-                     i + self._training_window_size:i + self._training_window_size + self._target_window_size
-                     ])
+
+        for i in range(self._training_window_size, len(input_array) - self._target_window_size + 1):
+            x.append(input_array[i - self._training_window_size:i])
+            y.append(input_array[i:i + self._target_window_size, 0])
+
         return x, y
+
+    def inverse_testing_scaler(self, data: np.ndarray, scaler_by_column_name: str) -> np.ndarray:
+        """
+        Inverse the scaling of the testing data.
+        :param data:
+        :param scaler_by_column_name:
+        :return:
+        """
+        scaler = self._scaler_by_column[scaler_by_column_name]
+        return scaler.inverse_transform(data)
