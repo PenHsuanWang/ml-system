@@ -13,11 +13,11 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
     def __init__(
             self,
-            input_data: pd.DataFrame,
             extract_column: list[str],
             training_data_ratio: float = 0.8,
             training_window_size: int = 60,
-            target_window_size: int = 1
+            target_window_size: int = 1,
+            input_data=None
     ):
         """
         Provide the raw dataframe as input parameters. Together with the desired column name.

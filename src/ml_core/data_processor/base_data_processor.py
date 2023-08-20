@@ -16,14 +16,23 @@ class BaseDataProcessor(ABC):
         :type input_data: pd.DataFrame
         :param input_data:
         """
+        # if input data is not provided, set it to None in initialization stage is okey, but must be provided later.
         self._input_df = input_data
         self._training_tensor = None
         self._training_target_tensor = None
         self._testing_tensor = None
         self._testing_target_tensor = None
 
+    def set_input_df(self, input_data: pd.DataFrame):
+        self._input_df = input_data
+
     def preprocess_data(self):
         """A high-level method that preprocesses the data."""
+
+        # check if input data is provided, or raise an process error
+        if self._input_df is None:
+            raise RuntimeError("Input data is not provided.")
+
         self._scaling_array()
         self._splitting()
         self._preprocessing()

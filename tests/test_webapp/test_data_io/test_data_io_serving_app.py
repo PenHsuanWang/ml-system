@@ -4,10 +4,10 @@ from src.webapp.data_io_serving_app import DataIOServingApp
 
 def test_singleton_pattern():
     # Get instance of the DataIOServingApp
-    app1 = DataIOServingApp.get_app()
+    app1 = DataIOServingApp()
 
     # Get another instance of the DataIOServingApp
-    app2 = DataIOServingApp.get_app()
+    app2 = DataIOServingApp()
 
     # They should be the same object (this confirms the singleton pattern)
     assert app1 is app2
@@ -20,7 +20,7 @@ def test_thread_safety():
     app2 = [None]
 
     def get_instance(result):
-        result[0] = DataIOServingApp.get_app()
+        result[0] = DataIOServingApp()
 
     thread1 = threading.Thread(target=get_instance, args=(app1,))
     thread2 = threading.Thread(target=get_instance, args=(app2,))
