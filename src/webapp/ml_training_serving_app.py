@@ -1,9 +1,5 @@
 import os
 
-from fastapi import APIRouter, Depends, Body
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-
 import threading
 import torch
 
@@ -21,10 +17,6 @@ class MLTrainingServingApp:
        provide the request body with information about fetch_data parameter
     """
 
-    # define singleton pattern to get the app instance, provide thread safe
-    _app = None
-    _app_lock = threading.Lock()
-
     _data_io_serving_app = src.webapp.data_io_serving_app.get_app()
 
     # internal module tools for ml training job
@@ -41,29 +33,11 @@ class MLTrainingServingApp:
     _model = None
 
     def __init__(self):
+        """
+        All the field needed for ml process is put in class level
+        """
         pass
-        # self._data_io_serving_app = src.webapp.data_io_serving_app.get_app()
-        #
-        # # internal module tools for ml training job
-        # self._data_fetcher = None
-        # self._data_processor = None
-        # self._trainer = None
-        #
-        # # the port of object join the ml training job
-        # self._raw_pandas_dataframe = None
-        # self._training_tensor = None
-        # self._training_target_tensor = None
-        # self._testing_tensor = None
-        # self._testing_target_tensor = None
-        # self._model = None
 
-    # define singleton pattern to get the app instance
-    # @staticmethod
-    # def get_app():
-    #     with MLTrainingServingApp._app_lock:
-    #         if MLTrainingServingApp._app is None:
-    #             MLTrainingServingApp._app = MLTrainingServingApp()
-    #     return MLTrainingServingApp._app
 
     @classmethod
     def set_data_fetcher(cls, data_fetcher_name: str) -> bool:
