@@ -18,6 +18,11 @@ class FullAnalysisBody(BaseModel):
 
 @router.post("/stock_analyzer/full_analysis")
 def full_analysis(request: FullAnalysisBody):
+    """
+    The full analysis endpoint for stock analyzer.
+    :param request:
+    :return:
+    """
     # Step 1: Initialize StockAnalyzerServingApp
     app = StockAnalyzerServingApp(request.stock_id, request.start_date, request.end_date)
 
