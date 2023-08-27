@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import torch
 import torch.nn as nn
 
 
@@ -12,11 +13,19 @@ class BaseModel(ABC, nn.Module):
         super(BaseModel, self).__init__()
 
     @abstractmethod
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        forward pass
-        :param x: input
-        :return: output
+        Perform a forward pass through the model
+        :param x: input torch tensor
+        :return: output torch tensor
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_model_hyper_parameters(self) -> dict:
+        """
+        get the model hyper-parameters
+        :return: model hyper-parameters
         """
         raise NotImplementedError
 

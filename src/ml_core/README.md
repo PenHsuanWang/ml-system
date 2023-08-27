@@ -98,3 +98,87 @@ test_target = data_processor.inverse_testing_scaler(
 mse = ((prediction_output - test_target) ** 2).mean(axis=0)
 print(f"Mean square error: {mse}")
 ```
+
+
+# Model Design
+
+## Torch NN Model
+
+The package `models.torch_nn_models` aims to provide a set of reusable PyTorch neural network models that can be easily integrated into larger machine learning pipelines. The design adopts an Object-Oriented Programming (OOP) approach to ensure modularity, reusability, and extensibility. 
+
+## Package Structure
+
+The package consists of the following Python files:
+
+- `base_model.py`: Contains the abstract base class for all types of neural network models.
+- `lstm_model.py`: Implements an LSTM-based neural network model.
+- `model.py`: Includes a factory class for creating instances of different neural network models.
+
+### Module Descriptions
+
+#### `base_model.py`
+
+This module defines an abstract base class (`BaseModel`) that inherits from `nn.Module`, PyTorch’s module for neural networks. The class defines the core methods that every neural network model should have:
+
+- `forward`: An abstract method that must be overridden by subclasses to define the forward pass of the neural network.
+- `get_model_hyper_parameters`: An abstract method that returns a dictionary of model hyper-parameters. This allows for greater introspection and can be used for tuning.
+
+#### `lstm_model.py`
+
+This module implements the LSTM-based neural network model (`LSTMModel`). The model includes:
+
+- Two LSTM layers.
+- A fully connected (linear) layer for output.
+
+The `LSTMModel` class inherits from `BaseModel` and overrides the `forward` and `get_model_hyper_parameters` methods.
+
+#### `model.py`
+
+This module includes the factory class (`TorchNeuralNetworkModelFactory`) that takes a model type as a string and returns an instance of the corresponding neural network model. This allows for greater flexibility and easier integration into larger systems.
+
+### Classes
+
+#### BaseModel (Abstract Class)
+
+- **Methods:**
+  - `forward(self, x: torch.Tensor) -> torch.Tensor`: Abstract method to perform a forward pass through the neural network.
+  - `get_model_hyper_parameters(self) -> dict`: Abstract method to get the hyper-parameters of the model.
+
+#### LSTMModel (Concrete Class)
+
+- **Attributes:**
+  - `hidden_size`: The number of hidden units.
+  - `lstm1`: The first LSTM layer.
+  - `lstm2`: The second LSTM layer.
+  - `fc`: The fully connected output layer.
+  
+- **Methods:**
+  - `__init__(self, input_size, hidden_size, output_size)`: Constructor to initialize the LSTM model.
+  - `forward(self, x: torch.Tensor) -> torch.Tensor`: Implements the forward pass.
+  - `get_model_hyper_parameters(self) -> dict`: Retrieves the model’s hyper-parameters.
+
+#### TorchNeuralNetworkModelFactory (Factory Class)
+
+- **Methods:**
+  - `create_torch_nn_model(model_type: str, **kwargs) -> BaseModel`: Creates and returns an instance of the specified neural network model.
+
+### Exceptions
+
+#### UnsupportedModelType
+
+Custom exception raised when an unsupported model type is provided to the factory class.
+
+## Future Scope
+
+1. Add more types of neural network models.
+2. Implement methods for model saving and loading.
+3. Extend the base class to include common training and evaluation loops.
+4. Enable multi-device support for models.
+
+## Conclusion
+
+The design provides a flexible and extensible architecture for PyTorch neural network models, making it easier to build, test, and deploy various types of neural networks.
+
+---
+
+This design document serves as an initial guideline for the package development and can be updated as the project evolves.
