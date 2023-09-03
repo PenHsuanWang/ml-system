@@ -12,8 +12,6 @@ class MLFlowTracking:
         :param run_name:
         :return:
         """
-        print("MLFlowTracking: start_run")
-        breakpoint()
         mlflow.set_experiment(experiment_name)
         mlflow.start_run(run_name=run_name, *args, **kwargs)
 

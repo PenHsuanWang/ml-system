@@ -47,7 +47,8 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
     def set_model(self, model):
         """
         Provide the method to set the model
-        If the model is not prepare before, this method can be used to set the model
+        If the model is not prepare before, this method can be used to set the model.
+        The model is required to be a pytorch model, extract the model hyper-parameters from the model.
         :param model:
         :return:
         """
@@ -76,13 +77,17 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         if self._training_data is None or self._training_labels is None:
             raise RuntimeError("Training data or label is not provided.")
 
-        print(f"Training the model for {epochs} epochs")
-        self._model.train()
-
         self._mlflow_agent.start_run(
-            experiment_name="Pytorch Experiment",
+            experiment_name="ml-system-dev-test",
             run_name="Pytorch Run"
         )
+
+        # extract the model hyperparameters from the model
+        model_hyper_parameters = self._model.get_model_hyper_parameters()
+        self._mlflow_agent.log_params_many(model_hyper_parameters)
+
+        print(f"Training the model for {epochs} epochs")
+        self._model.train()
 
         for epoch in range(epochs):
             self._model.to(self._device)
@@ -100,6 +105,9 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
             print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
 
         """If the mlflow agent is provided, end the mlflow run"""
+
+        self._mlflow_agent.register_model(self._model, "Pytorch_Model")
+
         self._mlflow_agent.end_run()
 
         print("Training done")

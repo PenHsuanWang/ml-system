@@ -15,18 +15,20 @@ class MLFlowModelRegistry:
         print(f"start Registering the model {model_name} to MLFlow server")
 
         artifact_path = "pytorch-model"
-        run_id = mlflow.active_run().info.run_id
-        model_uri = "{artifact_path}".format(run_id=run_id, artifact_path=artifact_path)
+        run = mlflow.active_run()
 
-        mlflow.pytorch.log_model(
-            pytorch_model=pytorch_model,
-            artifact_path=model_uri,
-            registered_model_name=model_name
-        )
-        # mlflow.pytorch.autolog()
+        if run is not None:
+            run_id = run.info.run_id
 
-        #
-        # model_details = mlflow.register_model(model_uri=model_uri, name=model_name)
+            mlflow.pytorch.log_model(
+                pytorch_model=pytorch_model,
+                artifact_path=artifact_path,
+                registered_model_name=model_name  # this should register the model
+            )
+
+
+            model_uri = f"runs:/{run_id}/{artifact_path}"
+            model_details = mlflow.register_model(model_uri=model_uri, name=model_name)
 
         print(f"Finish Registering the model {model_name} to MLFlow server")
         return

@@ -3,7 +3,14 @@ import torch
 from torch import nn, optim
 
 from src.ml_core.trainer.torch_nn_trainer import TorchNeuralNetworkTrainer
+from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 
+testing_model = TorchNeuralNetworkModelFactory.create_torch_nn_model(
+    model_type="lstm",
+    input_size=1,
+    hidden_size=10,
+    output_size=1
+)
 
 # a simple model for testing
 class SimpleModel(nn.Module):
@@ -16,7 +23,7 @@ class SimpleModel(nn.Module):
 
 
 def test_constructor():
-    model = SimpleModel()
+    model = testing_model
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
     device = 'cpu'
@@ -31,7 +38,7 @@ def test_constructor():
 
 def test_set_model():
     trainer = TorchNeuralNetworkTrainer(None, None, None)
-    model = SimpleModel()
+    model = testing_model()
     trainer.set_model(model)
 
     assert trainer._model == model
@@ -49,23 +56,36 @@ def test_set_training_tensor():
 
 
 def test_run_training_loop():
-    model = SimpleModel()
+    # Create LSTM model from the factory
+    model = TorchNeuralNetworkModelFactory.create_torch_nn_model(
+        model_type="lstm",
+        input_size=1,
+        hidden_size=10,
+        output_size=1
+    )
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
     device = 'cpu'
-    data = torch.tensor([[1.0], [2.0]])
-    labels = torch.tensor([[1.0], [2.0]])
 
-    trainer = TorchNeuralNetworkTrainer(criterion, optimizer, device, model=model, training_data=data, training_labels=labels)
+    # Dimensions: (batch_size, seq_len, input_size)
+    data = torch.tensor([[[i * 1.0] for i in range(1, 6)],
+                         [[i * 1.0] for i in range(6, 11)]])  # Extended the sequence
+
+    # Dimensions: (batch_size, output_size)
+    labels = torch.tensor([[5.0], [10.0]])  # Updated labels
+
+    trainer = TorchNeuralNetworkTrainer(criterion, optimizer, device, model=model, training_data=data,
+                                        training_labels=labels)
 
     initial_params = [p.clone() for p in model.parameters()]
 
-    trainer.run_training_loop(1)
+    trainer.run_training_loop(10)
 
     final_params = [p for p in model.parameters()]
 
     for p_initial, p_final in zip(initial_params, final_params):
-        assert not torch.equal(p_initial, p_final)
+        assert not torch.equal(p_initial, p_final), f"Initial params: {p_initial}, Final params: {p_final}"
+
 
 
 def test_invalid_model_or_data():
@@ -74,7 +94,7 @@ def test_invalid_model_or_data():
     with pytest.raises(RuntimeError, match="Model is not provided."):
         trainer.run_training_loop(1)
 
-    trainer.set_model(SimpleModel())
+    trainer.set_model(testing_model)
 
     with pytest.raises(RuntimeError, match="Training data or label is not provided."):
         trainer.run_training_loop(1)

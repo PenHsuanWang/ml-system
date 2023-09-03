@@ -7,6 +7,7 @@ import src.webapp.data_io_serving_app
 from src.ml_core.data_processor.data_processor import DataProcessorFactory
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 from src.ml_core.trainer.trainer import TrainerFactory
+from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
 
 
 class MLTrainingServingApp:
@@ -144,6 +145,8 @@ class MLTrainingServingApp:
         Design for an exposed REST api to let client init the trainer
         To initialize the trainer
         Initialize parameters from kwargs provided by client via REST api request body.
+        The trainer provide the function to add mlflow agent to log the training process and register the model
+        create mlflow agent and setting the tracking uri here.
         :param trainer_type:
         :param kwargs:
         :return:
@@ -157,12 +160,20 @@ class MLTrainingServingApp:
         if kwargs["optimizer"] == "adam":
             optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs["learning_rate"]))
 
+        mlflow_agent = MLFlowAgent()
+
+        os.environ['MLFLOW_TRACKING_USERNAME'] = 'mlflow_pwang'
+        os.environ['MLFLOW_TRACKING_PASSWORD'] = 'mlflow_pwang'
+        mlflow_agent.set_tracking_uri("http://localhost:5001")
+
+
         try:
             cls._trainer = TrainerFactory.create_trainer(
                 trainer_type,
                 criterion=criterion,
                 optimizer=optimizer,
                 device=torch.device(kwargs["device"]),
+                mlflow_agent=mlflow_agent
             )
         except Exception as e:
             print("Failed to init trainer")

@@ -40,6 +40,11 @@ class NullMLFlowAgent(MLFlowTracking, MLFlowConfiguration, MLFlowModelRegistry, 
         print("NullMLFlowAgent: end_run")
         pass
 
+    @staticmethod
+    def register_model(*args, **kwargs):
+        print("NullMLFlowAgent: register_model")
+        pass
+
 
 class MLFlowAgent(MLFlowTracking, MLFlowConfiguration, MLFlowModelRegistry, metaclass=SingletonMeta):
     """
