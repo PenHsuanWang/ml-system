@@ -82,12 +82,10 @@ class MLFlowClientModelAgent(MLFlowClient):
                 raise ValueError(
                     f"The model stage should be in {category}, but the provided model stage is {model_stage}")
 
-            model_version_details = cls.mlflow_client.get_latest_versions(
+            model_version = cls.mlflow_client.get_latest_versions(
                 name=model_name,
                 stages=[model_stage]
-            )
-            # get the model version from the model_version_details
-            model_version = model_version_details[0].version
+            )[0].get("version")
 
         return model_version
 
@@ -101,12 +99,9 @@ class MLFlowClientModelAgent(MLFlowClient):
         if not cls.is_model_name_exist(model_name):
             raise ValueError(f"The model name: {model_name} is not registered")
 
-        model_version_details = cls.mlflow_client.get_latest_versions(
+        model_version = cls.mlflow_client.get_latest_versions(
             name=model_name,
-        )
-        # get the model version from the model_version_details
-        model_version = model_version_details[0].version
-
+        )[0].get("version")
         return model_version
 
     @classmethod
