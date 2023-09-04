@@ -59,7 +59,7 @@ mlflow_client.MLFlowConfiguration.set_tracking_uri("http://localhost:5001")
 client = mlflow_client.MLFlowClient()
 
 # Retrieve model information
-client.get_model("Pytorch_Model", model_stage="Production")
+client.get_download_model_uri("Pytorch_Model", model_stage="Production")
 
 # Load a model from the specified URI
 model_uri = "models:/Pytorch_Model/Production"
@@ -71,3 +71,55 @@ By following these steps, you can effectively manage interactions with the MLflo
 
 ## API Reference
 
+### `client.py`
+
+#### Design Overview
+
+The MLFlow Client design is structured into three main components:
+
+1. **MLFlowClient (Abstract Base Class):**
+   - `MLFlowClient` serves as the abstract base class (ABC) for the MLFlow Client hierarchy.
+   - It defines a common interface for interacting with the MLflow Tracking Server.
+   - It ensures a Singleton pattern for the `mlflow_client`, guaranteeing that all parts of the application share the same instance.
+
+2. **MLFlowClientModelAgent (Composite Class):**
+   - `MLFlowClientModelAgent` extends the `MLFlowClient`.
+   - It represents a more specialized client focused on model-related operations.
+   - This class inherits the common interface defined in `MLFlowClient` and can provide its own specialized methods for model management.
+
+3. **MLFlowClientModelLoader (Concrete Class):**
+   - `MLFlowClientModelLoader` is a concrete class that further extends `MLFlowClientModelAgent`.
+   - It represents a specific use case of the model-related operations, specifically for downloading models from MLflow.
+   - This class inherits both the common interface defined in `MLFlowClient` and the specialized methods provided by `MLFlowClientModelAgent`. It is dedicated to the task of model downloading.
+
+#### Design Purpose
+
+The design aims to achieve the following goals:
+
+- **Consistency:** By defining a common interface in the `MLFlowClient`, it ensures that all parts of the application interact with the MLflow Tracking Server consistently.
+
+- **Reusability:** The design allows for the reuse of the same MLFlow client instance (`mlflow_client`) throughout the application, reducing resource overhead and promoting efficient usage.
+
+- **Specialization:** The hierarchy of classes allows for specialization. While `MLFlowClient` offers a generic interface, `MLFlowClientModelAgent` specializes in model-related operations, and `MLFlowClientModelLoader` narrows its focus to downloading models.
+
+- **Flexibility:** The design can be extended to include more specialized clients for different aspects of MLflow, all inheriting from the common `MLFlowClient`.
+
+#### How to Use
+
+To use the MLFlow Client design in your application, follow these steps:
+
+1. **Initialize MLflow Tracking URI:**
+   - Before using the MLflow Client, set the tracking URI using `mlflow.set_tracking_uri()` to point to your MLflow Tracking Server.
+
+2. **Create and Initialize the Client:**
+   - Create an instance of `MLFlowClientModelLoader` or other specialized clients if needed.
+   - Initialize the MLflow client instance using `init_mlflow_client()`.
+
+3. **Interact with MLflow:**
+   - Use the methods provided by the client, such as `get_download_model_uri()` to perform specific MLflow operations.
+
+```python
+# Example usage:
+mlflow.set_tracking_uri("http://localhost:5011")
+MLFlowClientModelLoader.init_mlflow_client()
+download_uri = MLFlowClientModelLoader.get_download_model_uri(model_name="Pytorch_Model", model_stage="Production")
