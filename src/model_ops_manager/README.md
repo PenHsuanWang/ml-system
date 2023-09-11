@@ -59,7 +59,7 @@ mlflow_client.MLFlowConfiguration.set_tracking_uri("http://localhost:5001")
 client = mlflow_client.MLFlowClient()
 
 # Retrieve model information
-client.get_download_model_uri("Pytorch_Model", model_stage="Production")
+client.get_model_download_source_uri("Pytorch_Model", model_stage="Production")
 
 # Load a model from the specified URI
 model_uri = "models:/Pytorch_Model/Production"

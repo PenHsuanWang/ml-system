@@ -1,14 +1,26 @@
 
 import mlflow
+import mlflow.pytorch
+import mlflow.sklearn
+import mlflow.tensorflow
+import mlflow.xgboost
+
 
 from src.model_ops_manager.mlflow_agent.client import MLFlowClientModelAgent
 
 
+MLFLOW_MODEL_FLAVORS = {
+    'mlflow.pytorch': mlflow.pytorch,
+    'mlflow.sklearn': mlflow.sklearn,
+    'mlflow.tensorflow': mlflow.tensorflow,
+    'mlflow.xgboost': mlflow.xgboost
+}
+
+
 class MLFlowClientModelLoader(MLFlowClientModelAgent):
 
-
     @classmethod
-    def _parsing_adhoc_input_to_model_uri(cls, *args, **kwargs) -> str:
+    def _adhoc_input_to_model_download_source_uri(cls, *args, **kwargs) -> str:
         """
         this method is used to parse the input to model uri
         the adhoc input of model information includes.
@@ -42,18 +54,18 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
                     model_uri = args[0]
                     return model_uri
                 else:
-                    model_uri = cls.get_download_model_uri(args[0])
+                    model_uri = cls.get_model_download_source_uri(args[0])
                     return model_uri
             if len(args) == 2:
                 # model_name and model_version or model_stage provided
                 model_name = args[0]
                 if isinstance(args[1], int):
                     model_version = args[1]
-                    model_uri = cls.compose_model_uri(model_name, model_version)
+                    model_uri = cls.get_model_download_source_uri(model_name, model_version)
                     return model_uri
                 if isinstance(args[1], str):
                     model_stage = args[1]
-                    model_uri = cls.compose_model_uri(model_name, model_stage=model_stage)
+                    model_uri = cls.get_model_download_source_uri(model_name, model_stage=model_stage)
                     return model_uri
             if len(args) == 3:
                 # model_name, model_version and model_stage provided
@@ -63,7 +75,7 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
                     model_version, model_stage = arg2, arg3
                 else:
                     model_stage, model_version = arg2, arg3
-                model_uri = cls.compose_model_uri(model_name, model_version, model_stage)
+                model_uri = cls.get_model_download_source_uri(model_name, model_version, model_stage)
                 return model_uri
 
     @classmethod
@@ -82,7 +94,7 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
         :return:
         """
 
-        model_uri = cls._parsing_adhoc_input_to_model_uri(*args, **kwargs)
+        model_uri = cls._adhoc_input_to_model_download_source_uri(*args, **kwargs)
         model = mlflow.pyfunc.load_model(model_uri)
         return model
 
@@ -96,9 +108,12 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
         :return:
         """
 
-        loaded_pyfunc_model = cls.load_pyfunc_model(*args, **kwargs)
-        original_flavor_loader_module = (loaded_pyfunc_model.load_model(args[0])._model_meta.flavors["python_function"]["loader_module"])
-        print(type(original_flavor_loader_module))
+        original_flavor_loader_module = cls.load_pyfunc_model(*args, **kwargs)._model_meta.flavors["python_function"]["loader_module"]
+        print(f"fetching origin model flavor{original_flavor_loader_module}")
+
+        if original_flavor_loader_module in MLFLOW_MODEL_FLAVORS.keys():
+            original_model = MLFLOW_MODEL_FLAVORS[original_flavor_loader_module].load_model(*args, **kwargs)
+            return original_model
 
 
 
@@ -107,12 +122,13 @@ if __name__ == "__main__":
     mlflow.set_tracking_uri("http://localhost:5011")
     model_downloader = MLFlowClientModelLoader
     model_downloader.init_mlflow_client()
-    model_uri = model_downloader.get_download_model_uri("Pytorch_Model", model_stage="Staging")
-    print(model_uri)
+    model_uri = model_downloader.get_model_download_source_uri("Pytorch_Model", model_stage="Staging")
+    # print(model_uri)
+    # model = model_downloader.load_pyfunc_model("Pytorch_Model")
+    # print(model)
+    model = model_downloader.load_original_model(model_uri)
 
-    model = model_downloader.load_pyfunc_model("Pytorch_Model")
+    print(type(model))
     print(model)
-
-    # model = model_downloader.load_original_model(model_uri)
 
 

@@ -184,7 +184,7 @@ class MLFlowClientModelAgent(MLFlowClient):
         return f"models:/{model_name}/{model_version}"
 
     @classmethod
-    def get_download_model_uri(cls, model_name: str, model_version=None, model_stage=None) -> str:
+    def get_model_download_source_uri(cls, model_name: str, model_version=None, model_stage=None) -> str:
         """
         to get the model uri for downloading the model with provided model name, model version and model stage
         provide model_name is required, and provide model_stage to get the latest version with corresponding stage,
