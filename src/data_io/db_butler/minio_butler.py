@@ -1,5 +1,5 @@
 
-from src.db_butler.base_butler import Base
+from src.data_io.db_butler.base_butler import Base
 
 import re
 from minio import Minio
