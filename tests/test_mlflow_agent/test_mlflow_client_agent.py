@@ -50,43 +50,71 @@ def mlflow_model_loader():
     mlflow_model_loader.init_mlflow_client()
     return mlflow_model_loader
 
-def test_parse_model_name(mlflow_model_loader):
-    # Test when only the model name is provided
-    model_uri = mlflow_model_loader._parsing_adhoc_input_to_model_uri("Pytorch_Model")
-    assert model_uri == "models:/Pytorch_Model"
 
-def test_parse_model_name_and_version(mlflow_model_loader):
-    # Test when model name and version are provided
-    model_uri = mlflow_model_loader._parsing_adhoc_input_to_model_uri("Pytorch_Model", 1)
-    assert model_uri == "models:/Pytorch_Model/1"
+class TestMLFlowClientModelLoader:
 
-def test_parse_model_name_and_stage(mlflow_model_loader):
-    # Test when model name and stage are provided
-    model_uri = mlflow_model_loader._parsing_adhoc_input_to_model_uri("Pytorch_Model", "Staging")
-    assert model_uri == "models:/Pytorch_Model/Staging"
+    @classmethod
+    def setup_class(cls):
+        # Setup any necessary test fixtures or configurations
+        cls.mlflow_client_mock = Mock()
+        cls.mlflow_client_mock.get_latest_versions.return_value = [{"version": 1}]  # Mock the return value
 
-def test_parse_model_name_version_and_stage(mlflow_model_loader):
-    # Test when model name, version, and stage are provided
-    model_uri = mlflow_model_loader._parsing_adhoc_input_to_model_uri("Pytorch_Model", 1, "Production")
-    assert model_uri == "models:/Pytorch_Model/1/Production"
+    @classmethod
+    def teardown_class(cls):
+        # Teardown any resources after testing
+        pass
 
-def test_parse_model_artifact_uri(mlflow_model_loader):
-    # Test when a model artifact URI is provided
-    model_uri = mlflow_model_loader._parsing_adhoc_input_to_model_uri("http://example.com/models/Pytorch_Model/1")
-    assert model_uri == "http://example.com/models/Pytorch_Model/1"
+    def test_valid_model_name(self):
+        # Test when only model_name is provided
+        model_name = "MyModel"
+        model_uri = MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri(model_name)
+        assert model_uri == "expected_model_uri"
 
-def test_invalid_args_length(mlflow_model_loader):
-    # Test when an invalid number of args is provided
-    with pytest.raises(ValueError):
-        mlflow_model_loader._parsing_adhoc_input_to_model_uri("Pytorch_Model", 1, "Staging", "ExtraArg")
+    def test_valid_model_name_and_version(self):
+        # Test when model_name and model_version are provided
+        model_name = "MyModel"
+        model_version = 2
+        model_uri = MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri(model_name, model_version)
+        assert model_uri == "expected_model_uri"
 
-def test_invalid_first_arg_type(mlflow_model_loader):
-    # Test when the first arg is not a string
-    with pytest.raises(TypeError):
-        mlflow_model_loader._parsing_adhoc_input_to_model_uri(123)
+    def test_valid_model_name_and_stage(self):
+        # Test when model_name and model_stage are provided
+        model_name = "MyModel"
+        model_stage = "Staging"
+        model_uri = MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri(model_name, model_stage)
+        assert model_uri == "expected_model_uri"
 
-def test_invalid_stage_value(mlflow_model_loader):
-    # Test when an invalid stage value is provided
-    with pytest.raises(ValueError):
-        mlflow_model_loader._parsing_adhoc_input_to_model_uri("Pytorch_Model", "InvalidStage")
+    def test_valid_model_name_version_and_stage(self):
+        # Test when model_name, model_version, and model_stage are provided
+        model_name = "MyModel"
+        model_version = 2
+        model_stage = "Production"
+        model_uri = MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri(model_name, model_version, model_stage)
+        assert model_uri == "expected_model_uri"
+
+    def test_invalid_args_length(self):
+        # Test when more than 3 arguments are provided
+        with pytest.raises(ValueError):
+            MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri("arg1", "arg2", "arg3", "arg4")
+
+    def test_invalid_first_arg_type(self):
+        # Test when the first argument is not a string
+        with pytest.raises(TypeError):
+            MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri(123)
+
+    def test_invalid_args_combination(self):
+        # Test when an invalid combination of arguments is provided
+        with pytest.raises(ValueError):
+            MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri("model_name", 2, "Staging")
+
+    def test_invalid_model_stage(self):
+        # Test when an invalid model_stage is provided
+        with pytest.raises(ValueError):
+            MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri("model_name", "Invalid_Stage")
+
+    def test_valid_model_artifact_uri(self):
+        # Test when a valid model artifact URI is provided
+        model_artifact_uri = "http://example.com/model/artifact"
+        model_uri = MLFlowClientModelLoader._adhoc_input_to_model_download_source_uri(model_artifact_uri)
+        assert model_uri == model_artifact_uri
 
