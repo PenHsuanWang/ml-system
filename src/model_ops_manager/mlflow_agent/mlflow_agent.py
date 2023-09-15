@@ -10,7 +10,6 @@ class NullMLFlowAgent(
     MLFlowTracking,
     MLFlowConfiguration,
     MLFlowModelRegistry,
-    MLFlowClient,
     MLFlowClientModelLoader,
     metaclass=SingletonMeta
 ):
@@ -95,18 +94,16 @@ class NullMLFlowAgent(
         pass
 
 
-
 class MLFlowAgent(
     MLFlowTracking,
     MLFlowConfiguration,
     MLFlowModelRegistry,
-    MLFlowClient,
     MLFlowClientModelLoader,
     metaclass=SingletonMeta
 ):
     """
     MLFlowAgent class here integrates all the MLFlow functionalities into a single class
-    To check the exact sub-class methods, please refer to the corresponding sub-class
+    To check the exact subclass methods, please refer to the corresponding sub-class
     MLFlowConfiguration: setting MLFlow tracking uri
     MLFlowTracking: logging model metrics and parameters
     MLFlowModelRegistry: registering the model
