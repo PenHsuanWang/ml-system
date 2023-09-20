@@ -1,9 +1,12 @@
 import pytest
+import numpy as np
 import torch
 from torch import nn, optim
+from torch.utils.data.dataloader import DataLoader
 
 from src.ml_core.trainer.torch_nn_trainer import TorchNeuralNetworkTrainer
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
+from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 
 testing_model = TorchNeuralNetworkModelFactory.create_torch_nn_model(
     model_type="lstm",
@@ -38,7 +41,7 @@ def test_constructor():
 
 def test_set_model():
     trainer = TorchNeuralNetworkTrainer(None, None, None)
-    model = testing_model()
+    model = testing_model
     trainer.set_model(model)
 
     assert trainer._model == model
@@ -49,10 +52,18 @@ def test_set_training_tensor():
     data = torch.tensor([[1.0], [2.0]])
     labels = torch.tensor([[1.0], [2.0]])
 
-    trainer.set_training_tensor(data, labels)
+    # Convert PyTorch tensors to NumPy arrays
+    data_np = data.numpy()
+    labels_np = labels.numpy()
 
-    assert torch.equal(trainer._training_data, data)
-    assert torch.equal(trainer._training_labels, labels)
+    dataset = TimeSeriesDataset(data_np, labels_np)  # Use NumPy arrays
+
+    # Create a DataLoader for the data and labels
+    training_data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
+
+    trainer.set_training_data_loader(training_data_loader)
+
+    assert trainer._training_data_loader == training_data_loader
 
 
 def test_run_training_loop():
@@ -61,7 +72,7 @@ def test_run_training_loop():
         model_type="lstm",
         input_size=1,
         hidden_size=10,
-        output_size=1
+        output_size=1,
     )
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
@@ -74,8 +85,14 @@ def test_run_training_loop():
     # Dimensions: (batch_size, output_size)
     labels = torch.tensor([[5.0], [10.0]])  # Updated labels
 
-    trainer = TorchNeuralNetworkTrainer(criterion, optimizer, device, model=model, training_data=data,
-                                        training_labels=labels)
+    # Convert PyTorch tensors to NumPy arrays
+    data_np = data.numpy()
+    labels_np = labels.numpy()
+
+    # Create a DataLoader for the data and labels
+    dataset = TimeSeriesDataset(data_np, labels_np)  # Use NumPy arrays
+
+    trainer = TorchNeuralNetworkTrainer(criterion, optimizer, device, model=model, training_data_loader=dataset)
 
     initial_params = [p.clone() for p in model.parameters()]
 
@@ -89,7 +106,14 @@ def test_run_training_loop():
 
 
 def test_invalid_model_or_data():
-    trainer = TorchNeuralNetworkTrainer(None, None, None)
+    # Create a dummy DataLoader with sample data
+    dummy_data = torch.tensor([[1.0], [2.0]])
+    dummy_labels = torch.tensor([[1.0], [2.0]])
+    dummy_dataset = torch.utils.data.TensorDataset(dummy_data, dummy_labels)
+    dummy_data_loader = torch.utils.data.DataLoader(dummy_dataset, batch_size=1, shuffle=False)
+
+    # Create the trainer with the dummy DataLoader
+    trainer = TorchNeuralNetworkTrainer(None, None, None, training_data_loader=dummy_data_loader)
 
     with pytest.raises(RuntimeError, match="Model is not provided."):
         trainer.run_training_loop(1)

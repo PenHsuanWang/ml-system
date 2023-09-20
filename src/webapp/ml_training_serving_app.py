@@ -2,9 +2,11 @@ import os
 
 import threading
 import torch
+from torch.utils.data.dataloader import DataLoader
 
 import src.webapp.data_io_serving_app
 from src.ml_core.data_processor.data_processor import DataProcessorFactory
+from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 from src.ml_core.trainer.trainer import TrainerFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
@@ -164,7 +166,7 @@ class MLTrainingServingApp:
 
         os.environ['MLFLOW_TRACKING_USERNAME'] = 'mlflow_pwang'
         os.environ['MLFLOW_TRACKING_PASSWORD'] = 'mlflow_pwang'
-        mlflow_agent.set_tracking_uri("http://localhost:5001")
+        mlflow_agent.set_tracking_uri("http://localhost:5011")
 
 
         try:
@@ -196,6 +198,17 @@ class MLTrainingServingApp:
 
         cls._data_processor.preprocess_data()
 
+        time_series_dataset = TimeSeriesDataset(
+            cls._data_processor.get_training_data_x(),
+            cls._data_processor.get_training_target_y()
+        )
+        torch_dataloader = DataLoader(
+            time_series_dataset,
+            batch_size=len(time_series_dataset),
+            shuffle=False
+        )
+
+
         # check the model is initialized
         if cls._model is None:
             print("Model is not initialized")
@@ -207,10 +220,7 @@ class MLTrainingServingApp:
             return False
         else:
             cls._trainer.set_model(cls._model)
-            cls._trainer.set_training_tensor(
-                cls._data_processor.get_training_data_x(),
-                cls._data_processor.get_training_target_y()
-            )
+            cls._trainer.set_training_data_loader(torch_dataloader)
 
         try:
             print(f"Training the model for {epochs} epochs")

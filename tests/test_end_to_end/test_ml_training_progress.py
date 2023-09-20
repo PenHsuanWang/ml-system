@@ -57,7 +57,7 @@ def test_complete_ml_training_process():
     )
 
     trainer.set_model(model)
-    trainer.set_training_tensor(train_tensor, train_target_tensor)
+    trainer.set_training_data_loader(train_tensor, train_target_tensor)
 
     try:
         trainer.run_training_loop(epochs=300)

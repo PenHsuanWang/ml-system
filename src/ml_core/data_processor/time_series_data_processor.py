@@ -89,11 +89,11 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
         # convert the numpy array to pytorch tensor.
         # assign the tensor to object field.
-        self._training_data_x = torch.from_numpy(x_train).float()
-        self._training_target_y = torch.from_numpy(y_train).float()
+        self._training_data_x = x_train
+        self._training_target_y = y_train
 
-        self._testing_data_x = torch.from_numpy(x_test).float()
-        self._testing_target_y = torch.from_numpy(y_test).float()
+        self._testing_data_x = x_test
+        self._testing_target_y = y_test
 
     def _extract_training_data_and_scale(self) -> None:
         """
