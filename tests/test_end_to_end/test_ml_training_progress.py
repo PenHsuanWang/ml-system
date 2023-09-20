@@ -29,11 +29,11 @@ def test_complete_ml_training_process():
         print(re)
         assert False
 
-    train_tensor = data_processor.get_training_tensor()
-    train_target_tensor = data_processor.get_training_target_tensor()
+    train_tensor = data_processor.get_training_data_x()
+    train_target_tensor = data_processor.get_training_target_y()
 
-    test_tensor = data_processor.get_testing_tensor()
-    test_target_tensor = data_processor.get_testing_target_tensor()
+    test_tensor = data_processor.get_testing_data_x()
+    test_target_tensor = data_processor.get_testing_target_y()
 
     print(train_tensor.shape)
     print(train_target_tensor.shape)

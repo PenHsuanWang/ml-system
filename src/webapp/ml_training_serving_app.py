@@ -208,8 +208,8 @@ class MLTrainingServingApp:
         else:
             cls._trainer.set_model(cls._model)
             cls._trainer.set_training_tensor(
-                cls._data_processor.get_training_tensor(),
-                cls._data_processor.get_training_target_tensor()
+                cls._data_processor.get_training_data_x(),
+                cls._data_processor.get_training_target_y()
             )
 
         try:

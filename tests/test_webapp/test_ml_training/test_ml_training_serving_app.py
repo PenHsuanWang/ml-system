@@ -64,8 +64,8 @@ def test_run_ml_training(mock_ml_training_app):
                                                                                           '_model',
                                                                                           MagicMock()), patch.object(
             mock_ml_training_app, '_trainer', MagicMock()):
-        mock_ml_training_app._data_processor.get_training_tensor.return_value = None
-        mock_ml_training_app._data_processor.get_training_target_tensor.return_value = None
+        mock_ml_training_app._data_processor.get_training_data_x.return_value = None
+        mock_ml_training_app._data_processor.get_training_target_y.return_value = None
         mock_ml_training_app._trainer.run_training_loop.return_value = None
 
         assert mock_ml_training_app.run_ml_training(10) == True
