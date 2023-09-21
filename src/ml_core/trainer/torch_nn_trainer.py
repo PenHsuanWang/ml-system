@@ -1,8 +1,7 @@
-import torch
+from torch.utils.data.dataloader import DataLoader
 
 from src.ml_core.trainer.base_trainer import BaseTrainer
 from src.model_ops_manager.mlflow_agent.mlflow_agent import NullMLFlowAgent
-
 
 class TorchNeuralNetworkTrainer(BaseTrainer):
 
@@ -12,8 +11,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
 
     def __init__(self, criterion, optimizer, device,
                  model=None,
-                 training_data=None,
-                 training_labels=None,
+                 training_data_loader=None,
                  mlflow_agent=NullMLFlowAgent()
                  ):
         """
@@ -36,13 +34,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         self._device = device
         self._mlflow_agent = mlflow_agent
 
-        # it is allowed to set the training data and label later
-        if training_data is not None and training_labels is not None:
-            self._training_data = training_data.to(self._device)
-            self._training_labels = training_labels.to(self._device)
-        else:
-            self._training_data = None
-            self._training_labels = None
+        self._training_data_loader = training_data_loader
 
     def set_model(self, model):
         """
@@ -54,16 +46,14 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         """
         self._model = model
 
-    def set_training_tensor(self, training_data: torch.Tensor, trainer_label: torch.Tensor) -> None:
+    def set_training_data_loader(self, training_data_loader: DataLoader) -> None:
         """
         Provide the method to set the training data and label
         If the training tensor id not prepare before, this method can be used to set the training data and label
-        :param training_data:
-        :param trainer_label:
+        :param training_data_loader: the torch DataLoader object
         :return:
         """
-        self._training_data = training_data.to(self._device)
-        self._training_labels = trainer_label.to(self._device)
+        self._training_data_loader = training_data_loader
 
     def run_training_loop(self, epochs: int) -> None:
         """
@@ -74,8 +64,8 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         # to check the model and training data is ready
         if self._model is None:
             raise RuntimeError("Model is not provided.")
-        if self._training_data is None or self._training_labels is None:
-            raise RuntimeError("Training data or label is not provided.")
+        # if self._training_data is None or self._training_labels is None:
+        #     raise RuntimeError("Training data or label is not provided.")
 
         self._mlflow_agent.start_run(
             experiment_name="ml-system-dev-test",
@@ -90,19 +80,26 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         self._model.train()
 
         for epoch in range(epochs):
-            self._model.to(self._device)
-            self._model.train()
-            outputs = self._model(self._training_data)
-            loss = self._criterion(outputs, self._training_labels)
 
-            self._optimizer.zero_grad()
-            loss.backward()
-            self._optimizer.step()
+            for i, data in enumerate(self._training_data_loader):
 
-            """If the mlflow agent is provided, log the loss"""
-            self._mlflow_agent.log_metric("loss", loss.item())
+                x, y = data
+                x = x.to(self._device)
+                y = y.to(self._device)
 
-            print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
+                self._model.to(self._device)
+                self._model.train()
+                outputs = self._model(x)
+                loss = self._criterion(outputs, y)
+
+                self._optimizer.zero_grad()
+                loss.backward()
+                self._optimizer.step()
+
+                """If the mlflow agent is provided, log the loss"""
+                self._mlflow_agent.log_metric("loss", loss.item())
+
+                print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
 
         """If the mlflow agent is provided, end the mlflow run"""
 

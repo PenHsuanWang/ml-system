@@ -18,10 +18,10 @@ class BaseDataProcessor(ABC):
         """
         # if input data is not provided, set it to None in initialization stage is okey, but must be provided later.
         self._input_df = input_data
-        self._training_tensor = None
-        self._training_target_tensor = None
-        self._testing_tensor = None
-        self._testing_target_tensor = None
+        self._training_data_x = None
+        self._training_target_y = None
+        self._testing_data_x = None
+        self._testing_target_y = None
 
     def set_input_df(self, input_data: pd.DataFrame):
         self._input_df = input_data
@@ -49,17 +49,17 @@ class BaseDataProcessor(ABC):
     def _preprocessing(self):
         raise NotImplementedError
 
-    def get_training_tensor(self):
-        return self._training_tensor
+    def get_training_data_x(self):
+        return self._training_data_x
 
-    def get_training_target_tensor(self):
-        return self._training_target_tensor
+    def get_training_target_y(self):
+        return self._training_target_y
 
-    def get_testing_tensor(self):
-        return self._testing_tensor
+    def get_testing_data_x(self):
+        return self._testing_data_x
 
-    def get_testing_target_tensor(self):
-        return self._testing_target_tensor
+    def get_testing_target_y(self):
+        return self._testing_target_y
 
 
 

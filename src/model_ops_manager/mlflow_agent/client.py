@@ -7,7 +7,7 @@ import mlflow
 import mlflow.entities.model_registry as mlflow_model_registry
 from mlflow.entities.model_registry.registered_model import RegisteredModel
 from mlflow.exceptions import MlflowException
-
+from src.model_ops_manager.mlflow_agent.singleton_meta import SingletonMeta
 
 # import src.model_ops_manager.mlflow_agent.utils as mlflow_utils
 
@@ -16,7 +16,7 @@ from mlflow.exceptions import MlflowException
 # let mlflow_client to be a class level resource
 
 
-class MLFlowClient(ABC):
+class MLFlowClient:
     """
     The base class of mlflow client to interact with mlflow server
     Singleton design of client to make all the concrete class share the same mlflow client
