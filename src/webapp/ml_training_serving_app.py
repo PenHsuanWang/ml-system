@@ -1,6 +1,8 @@
 import os
 
 import threading
+
+import mlflow
 import torch
 from torch.utils.data.dataloader import DataLoader
 
@@ -9,7 +11,7 @@ from src.ml_core.data_processor.data_processor import DataProcessorFactory
 from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 from src.ml_core.trainer.trainer import TrainerFactory
-from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
+from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent, NullMLFlowAgent
 
 
 class MLTrainingServingApp:
@@ -162,12 +164,24 @@ class MLTrainingServingApp:
         if kwargs["optimizer"] == "adam":
             optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs["learning_rate"]))
 
-        mlflow_agent = MLFlowAgent()
+        # extract the mlflow environment variables from kwargs
+        mlflow_tracking_username = kwargs["mlflow_tracking_username"]
+        mlflow_tracking_password = kwargs["mlflow_tracking_password"]
+        mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
 
-        os.environ['MLFLOW_TRACKING_USERNAME'] = 'mlflow_pwang'
-        os.environ['MLFLOW_TRACKING_PASSWORD'] = 'mlflow_pwang'
-        mlflow_agent.set_tracking_uri("http://localhost:5011")
+        mlflow_agent = NullMLFlowAgent()
+        mlflow.set_experiment()
 
+        # check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
+        if mlflow_tracking_uri:
+
+            mlflow_agent = MLFlowAgent()
+
+            os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username
+            os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password
+            mlflow_agent.set_tracking_uri(mlflow_tracking_uri)
+
+            # TODO: test mlflow_agent is connected to mlflow server
 
         try:
             cls._trainer = TrainerFactory.create_trainer(
