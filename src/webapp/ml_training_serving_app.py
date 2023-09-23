@@ -118,7 +118,7 @@ class MLTrainingServingApp:
                 **kwargs
             )
         except Exception as e:
-            print("Faied to init data processor")
+            print("Failed to init data processor")
             return False
 
         return True
@@ -156,6 +156,10 @@ class MLTrainingServingApp:
         :return:
         """
 
+        if cls._model is None:
+            print("Model is not initialized")
+            return False
+
         criterion = None
         if kwargs["loss_function"] == "mse":
             criterion = torch.nn.MSELoss()
@@ -170,7 +174,6 @@ class MLTrainingServingApp:
         mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
 
         mlflow_agent = NullMLFlowAgent()
-        mlflow.set_experiment()
 
         # check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
         if mlflow_tracking_uri:
