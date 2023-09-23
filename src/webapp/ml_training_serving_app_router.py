@@ -8,14 +8,6 @@ from fastapi import APIRouter, Depends, Body
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-import threading
-import torch
-
-import src.webapp.data_io_serving_app
-from src.ml_core.data_processor.data_processor import DataProcessorFactory
-from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
-from src.ml_core.trainer.trainer import TrainerFactory
-
 from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
 
 # Definition of FastAPI router

@@ -1,11 +1,17 @@
 import pytest
 from src.webapp.ml_training_serving_app import MLTrainingServingApp
 from unittest.mock import patch, Mock, MagicMock
+from torch.nn import Module
 
 
 @pytest.fixture
 def mock_ml_training_app():
     return MLTrainingServingApp()
+
+# Create a custom mock class for PyTorch models
+class MockPyTorchModel(Module):
+    def __init__(self):
+        super(MockPyTorchModel, self).__init__()
 
 
 def test_set_data_fetcher(mock_ml_training_app):
@@ -49,14 +55,27 @@ def test_init_model(mock_ml_training_app):
         assert mock_ml_training_app.init_model("mock_model") == True
 
 
-def test_init_trainer(mock_ml_training_app):
-    with patch.object(mock_ml_training_app, '_model', Mock()):
-        assert mock_ml_training_app.init_trainer("mock_trainer", loss_function="mse", optimizer="adam",
-                                                 learning_rate="0.01", device="cpu") == True
-    with patch('ml_training_serving_app.TrainerFactory.create_trainer') as mock_factory:
-        mock_factory.side_effect = Exception("mocked error")
-        assert mock_ml_training_app.init_trainer("mock_trainer", loss_function="mse", optimizer="adam",
-                                                 learning_rate="0.01", device="cpu") == False
+@patch.object(MLTrainingServingApp, '_model', MockPyTorchModel())  # Create an instance of the custom mock model
+@patch('src.webapp.ml_training_serving_app.TorchNeuralNetworkModelFactory.create_torch_nn_model')
+def test_init_trainer(mock_create_torch_nn_model, mock_ml_training_app):
+    # Create a mock PyTorch model
+    mock_pytorch_model = MockPyTorchModel()
+
+    # Configure the mock to return an iterable of mock parameters when parameters is accessed
+    mock_parameters = [Mock(), Mock()]  # Add more Mocks as needed
+    mock_pytorch_model.parameters = Mock(return_value=list(mock_parameters))
+
+    # Configure the mock to return the mock PyTorch model when create_torch_nn_model is called
+    mock_create_torch_nn_model.return_value = mock_pytorch_model
+
+    # Test init_trainer with successful initialization
+    assert mock_ml_training_app.init_trainer("mock_trainer", loss_function="mse", optimizer="adam",
+                                             learning_rate="0.01", device="cpu") is True
+
+    # Test init_trainer with an exception raised
+    mock_create_torch_nn_model.side_effect = Exception("mocked error")
+    assert mock_ml_training_app.init_trainer("mock_trainer", loss_function="mse", optimizer="adam",
+                                             learning_rate="0.01", device="cpu") is False
 
 
 def test_run_ml_training(mock_ml_training_app):
