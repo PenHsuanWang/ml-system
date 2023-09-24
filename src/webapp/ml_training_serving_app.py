@@ -169,22 +169,25 @@ class MLTrainingServingApp:
             optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs["learning_rate"]))
 
         # extract the mlflow environment variables from kwargs
-        mlflow_tracking_username = kwargs["mlflow_tracking_username"]
-        mlflow_tracking_password = kwargs["mlflow_tracking_password"]
-        mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
 
         mlflow_agent = NullMLFlowAgent()
+        try:
+            mlflow_tracking_username = kwargs["mlflow_tracking_username"]
+            mlflow_tracking_password = kwargs["mlflow_tracking_password"]
+            mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
 
-        # check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
-        if mlflow_tracking_uri:
+            # check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
+            if mlflow_tracking_uri:
+                mlflow_agent = MLFlowAgent()
 
-            mlflow_agent = MLFlowAgent()
+                os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username
+                os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password
+                mlflow_agent.set_tracking_uri(mlflow_tracking_uri)
 
-            os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username
-            os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password
-            mlflow_agent.set_tracking_uri(mlflow_tracking_uri)
+                # TODO: test mlflow_agent is connected to mlflow server
 
-            # TODO: test mlflow_agent is connected to mlflow server
+        except KeyError:
+            pass
 
         try:
             cls._trainer = TrainerFactory.create_trainer(
@@ -248,6 +251,10 @@ class MLTrainingServingApp:
             return False
 
         cls._model.eval()
+
+    @classmethod
+    def get_model(cls):
+        return cls._model
 
 
 def get_app():
