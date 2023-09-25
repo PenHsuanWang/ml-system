@@ -57,7 +57,8 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
     def _splitting(self):
         """
-        Using the transform
+        splitting the extracted data into training and testing set by training data ratio.
+        the training data ratio to be 1 is acceptable. return empty testing set.
         :return:
         """
         self._training_array = self._extract_data_as_numpy_array[
@@ -76,6 +77,10 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         :return:
         """
 
+        # check the training window size and target window size is valid.
+        if len(self._training_array) - self._target_window_size < self._training_window_size:
+            raise ValueError("Training window size is too large.")
+
         # return object from sliding window mask is a list of numpy array.
         x_train, y_train = self._sliding_window_mask(self._training_array)
         x_test, y_test = self._sliding_window_mask(self._testing_array)
@@ -85,7 +90,12 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         x_test, y_test = np.array(x_test), np.array(y_test)
 
         y_train = np.reshape(y_train, (y_train.shape[0], y_train.shape[1]))
-        y_test = np.reshape(y_test, (y_test.shape[0], y_test.shape[1]))
+
+        if y_test.shape[0] != 0:
+            y_test = np.reshape(y_test, (y_test.shape[0], y_test.shape[1]))
+        else:
+            # if the testing set is empty, set the testing set to None. by pass to reshape the testing set.
+            pass
 
         # convert the numpy array to pytorch tensor.
         # assign the tensor to object field.
@@ -120,7 +130,8 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
     def _sliding_window_mask(self, input_array: np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
-        Sliding window mask on provided data, return training data and target data,
+        Sliding window mask on provided data, return training data and target data
+        if provided input_array is empty, return list with zero size.
         """
         x = []
         y = []
@@ -128,6 +139,9 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         for i in range(self._training_window_size, len(input_array) - self._target_window_size + 1):
             x.append(input_array[i - self._training_window_size:i])
             y.append(input_array[i:i + self._target_window_size, 0])
+
+        if len(x) != len(y):
+            raise ValueError("The length of training data and target data is not the same.")
 
         return x, y
 
