@@ -107,7 +107,7 @@ def init_data_preprocessor(
         data_processor_type = request.data_processor_type
         kwargs = request.kwargs
 
-        ml_trainer_app.init_data_preprocessor(data_processor_type, **kwargs)
+        ml_trainer_app.init_data_processor(data_processor_type, **kwargs)
 
         return {"message": f"Init data preprocessor successfully"}
 

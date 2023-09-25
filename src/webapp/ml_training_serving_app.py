@@ -7,6 +7,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 
 import src.webapp.data_io_serving_app
+import src.store.data_processor_manager
 from src.ml_core.data_processor.data_processor import DataProcessorFactory
 from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
@@ -23,6 +24,7 @@ class MLTrainingServingApp:
     """
 
     _data_io_serving_app = src.webapp.data_io_serving_app.get_app()
+    _data_processor_manager = src.store.data_processor_manager.get_app()
 
     # internal module tools for ml training job
     _data_fetcher = None
@@ -85,7 +87,7 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_data_preprocessor(cls, data_processor_type: str, **kwargs) -> bool:
+    def init_data_processor(cls, data_processor_type: str, **kwargs) -> bool:
         """
         Design for an exposed REST api to let client init the data preprocessor
         To initialize the data preprocessor
@@ -116,6 +118,11 @@ class MLTrainingServingApp:
                 data_processor_type,
                 input_data=cls._raw_pandas_dataframe,
                 **kwargs
+            )
+            # register the data processor to data processor manager
+            cls._data_processor_manager.add_data_processor(
+                data_processor_id="pytorch_lstm_aapl",
+                data_processor=cls._data_processor
             )
         except Exception as e:
             print("Failed to init data processor")

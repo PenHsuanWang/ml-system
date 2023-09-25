@@ -42,10 +42,10 @@ def test_init_data_preprocessor(mock_ml_training_app):
     with patch.object(mock_ml_training_app, '_data_fetcher', MagicMock()) as mock_data_fetcher:
         mock_data_fetcher.get_as_dataframe.return_value = None
 
-        assert mock_ml_training_app.init_data_preprocessor("some_type") == False
+        assert mock_ml_training_app.init_data_processor("some_type") == False
 
         mock_data_fetcher.get_as_dataframe.side_effect = ValueError("mocked error")
-        assert mock_ml_training_app.init_data_preprocessor("some_type") == False
+        assert mock_ml_training_app.init_data_processor("some_type") == False
 
 
 def test_init_model(mock_ml_training_app):
