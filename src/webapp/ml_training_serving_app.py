@@ -7,7 +7,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 
 import src.webapp.data_io_serving_app
-import src.store.data_processor_manager
+import src.store.data_processor_store
 from src.ml_core.data_processor.data_processor import DataProcessorFactory
 from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
@@ -24,7 +24,7 @@ class MLTrainingServingApp:
     """
 
     _data_io_serving_app = src.webapp.data_io_serving_app.get_app()
-    _data_processor_manager = src.store.data_processor_manager.get_app()
+    _data_processor_store = src.store.data_processor_store.get_app()
 
     # internal module tools for ml training job
     _data_fetcher = None
@@ -120,7 +120,7 @@ class MLTrainingServingApp:
                 **kwargs
             )
             # register the data processor to data processor manager
-            cls._data_processor_manager.add_data_processor(
+            cls._data_processor_store.add_data_processor(
                 data_processor_id="pytorch_lstm_aapl",
                 data_processor=cls._data_processor
             )

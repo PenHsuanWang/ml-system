@@ -1,7 +1,7 @@
 from src.data_io.data_fetcher.fetcher import DataFetcherFactory
 from src.ml_core.data_processor.data_processor import DataProcessorFactory
 import src.webapp.data_io_serving_app
-import src.store.data_processor_manager
+import src.store.data_processor_store
 import src.webapp.ml_training_serving_app
 import src.webapp.ml_inference_serving_app
 
