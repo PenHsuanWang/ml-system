@@ -8,7 +8,10 @@ from sklearn.preprocessing import MinMaxScaler
 
 class TimeSeriesDataProcessor(BaseDataProcessor):
     """
-    Concrete class for process time series data.
+    Inherit from BaseDataProcessor, the data transformation from pandas dataframe to numpy array.
+    The data transformation based on time series data. The data is extracted from pandas dataframe by column name.
+    The core part of the data transformation is sliding window mask. The sliding window mask is used to build
+    Get the output data with desired folded time window size.
     """
 
     def __init__(
