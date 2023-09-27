@@ -77,7 +77,7 @@ class DataProcessStore:
             return False
 
 
-def get_app():
+def get_store():
     """
     get the data process manager object in singleton pattern
     :return: the data process manager object

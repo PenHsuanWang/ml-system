@@ -1,33 +1,31 @@
 # Machine Learning Process Core
 
-This repository offers a collection of modules designed to streamline the model training process. The main steps involved in this process are:
+## Introduction to the Machine Learning Pipeline
 
-1. Fetching raw data from the data source.
-2. Preprocessing this raw data.
-3. Setting up the desired model.
-4. Initializing and executing the training process.
+Training an AI/ML model involves a series of stages, each critical to the development of a production-ready solution. These stages typically include data fetching, data engineering, data transformation, model preparation (e.g., designing a PyTorch neural network), executing the model training loop, model evaluation, and deployment. While these steps are essential, they can become complex and unwieldy when incorporated into a single Jupyter notebook or script.
+
+Moreover, as machine learning projects evolve and mature, maintaining and extending these operations can pose significant challenges. Treating a machine learning project as a software product requires a structured and scalable approach.
+
+Recognizing these challenges, our project features the Machine Learning Process Core module, which adopts Object-Oriented Programming (OOP) principles. This module reimagines each stage of the machine learning pipeline as a distinct, reusable operation. This approach simplifies the development process, enhances maintainability, and facilitates future iterations of the machine learning project. By encapsulating each stage as a discrete unit, data scientists can focus on refining individual components, enabling seamless integration into the broader machine learning workflow.
+
+## ML processes components modules
+
+The ML processes components modules considered the those stage afterword data fetching, that say, the module in `ml_core` package only responsible for operating collected raw data.
+
+This package offers a collection of modules designed to streamline the model training process. The main steps involved in this process are:
+
+1. Processing this raw data.
+2. Setting up the desired model.
+3. Initializing and executing the training process.
 
 While each module can be initialized independently, the actual ML training process requires adhering to the defined workflow sequence.
 
+![image](https://imgur.com/lO96Qfi)
 
-* Fetcher get the raw DataFrame from the source and provide to the Preprocessor.
-* Preprocessor preprocess the raw DataFrame and get the converted data for training. In torch nn model for example. The
-  preprocessor will convert the DataFrame to the `torch.Tensor`.
+* Processor preprocess the raw DataFrame and get the converted data for training. In torch nn model for example. The preprocessor will convert the DataFrame to the `np.ndarray`.
 * Prepare the Model.
+* Prepare the data loader for batching and feeding data to the training loop.
 * Initialization the Trainer with the model and the converted training data.
-
-
-## DataFetcher
-
-The `DataFetcher` serves as an interface to retrieve raw data from various data sources. 
-
-Located in another package named `data_io`, this module acts as an adaptor, seamlessly preparing data fetching operations from different sources like Yahoo Finance, local databases, etc.
-
-```python
-fetcher = DataFetcherFactory.create_data_fetcher("yfinance")
-fetcher.fetch_from_source(stock_id="AAPL", start_date="2022-01-01", end_date="2023-01-01")
-apple_raw_df = fetcher.get_as_dataframe()
-```
 
 ## Data Preprocessor
 
