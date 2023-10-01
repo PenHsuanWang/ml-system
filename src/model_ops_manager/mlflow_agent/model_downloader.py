@@ -108,13 +108,17 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
         :return:
         """
 
+        # load the mlflow pyfunc model first to check the flavor of original model
         original_flavor_loader_module = cls.load_pyfunc_model(*args, **kwargs)._model_meta.flavors["python_function"]["loader_module"]
         print(f"fetching origin model flavor{original_flavor_loader_module}")
 
-        if original_flavor_loader_module in MLFLOW_MODEL_FLAVORS.keys():
-            original_model = MLFLOW_MODEL_FLAVORS[original_flavor_loader_module].load_model(*args, **kwargs)
-            return original_model
+        # get the model uri based on adhoc input
+        model_uri = cls._adhoc_input_to_model_download_source_uri(*args, **kwargs)
 
+        # load the original model based on the flavor loader module
+        if original_flavor_loader_module in MLFLOW_MODEL_FLAVORS.keys():
+            original_model = MLFLOW_MODEL_FLAVORS[original_flavor_loader_module].load_model(model_uri)
+            return original_model
 
 
 if __name__ == "__main__":

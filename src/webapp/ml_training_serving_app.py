@@ -24,7 +24,7 @@ class MLTrainingServingApp:
     """
 
     _data_io_serving_app = src.webapp.data_io_serving_app.get_app()
-    _data_processor_store = src.store.data_processor_store.get_app()
+    _data_processor_store = src.store.data_processor_store.get_store()
 
     # internal module tools for ml training job
     _data_fetcher = None

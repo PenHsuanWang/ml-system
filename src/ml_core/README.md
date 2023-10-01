@@ -20,7 +20,7 @@ This package offers a collection of modules designed to streamline the model tra
 
 While each module can be initialized independently, the actual ML training process requires adhering to the defined workflow sequence.
 
-![image](https://imgur.com/lO96Qfi)
+![image](https://i.imgur.com/lO96Qfi.png)
 
 * Processor preprocess the raw DataFrame and get the converted data for training. In torch nn model for example. The preprocessor will convert the DataFrame to the `np.ndarray`.
 * Prepare the Model.
