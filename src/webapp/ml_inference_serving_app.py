@@ -11,7 +11,10 @@ class MlInferenceServingApp:
 
     """
     the ML inference serving app is a singleton class to serve the model inference process
-    storing the model in serving list, for expose model inference api to client
+    storing the model in serving list, for expose model inference api to client.
+    The set_model_* functions define the application to put model into serving list
+    load model from mlflow artifact and put into serving list is available, but need to set mlflow_agent tracking server uri first
+    The inference function is the main function to do model inference, it will get the model from serving list and do inference
 
     provide the method to client to
     1. add model from mlflow model artifact
@@ -50,7 +53,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def setup_model_inference_serving_app(cls, *args, **kwargs):
+    def setup_mlflow_agent(cls, *args, **kwargs):
         """
         set up the model inference serving app
         :return:
@@ -69,7 +72,7 @@ class MlInferenceServingApp:
         return cls._model_in_serving.keys()
 
     @classmethod
-    def load_original_model_from_mlflow_artifact(cls, model_name: str, model_version=None, model_stage=None):
+    def set_model_from_mlflow_artifact_origin_flavor(cls, model_name: str, model_version=None, model_stage=None):
         """
         load original model from mlflow artifact
         implementation in mlflow_agent, distinguish the origin model flavor by mlflow model registry
@@ -108,7 +111,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def load_pyfunc_model_from_mlflow_artifact(cls, model_name: str, model_version: str, model_stage: str = "Production"):
+    def set_model_from_mlflow_artifact_pyfunc(cls, model_name: str, model_version: str, model_stage: str = "Production"):
         """
         load pyfunc model from mlflow artifact
         implementation in mlflow_agent, distinguish the origin model flavor by mlflow model registry
@@ -140,7 +143,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def set_mode(cls, model_name: str, model: object):
+    def set_model_to_serving_list(cls, model_name: str, model: object):
         """
         To set the in-memory model from current python process to model serving
         add model into serving list with model name
@@ -156,7 +159,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def remove_model_from_serving(cls, model_name: str):
+    def remove_model_from_serving_list(cls, model_name: str):
         """
         remove model from serving
         :param model_name: model name

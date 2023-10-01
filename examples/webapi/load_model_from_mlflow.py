@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # register model from mlflow artifact and serving in inferencer
     model = get_model_from_mlflow_agent()
 
-    ml_inference_app.set_mode("Pytorch_Model", model)
+    ml_inference_app.set_model_to_serving_list("Pytorch_Model", model)
 
     # create a data fetcher to fetch data from yfinance to do model inference test
     yfinance_data_fetcher = DataFetcherFactory.create_data_fetcher("yfinance")
