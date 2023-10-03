@@ -27,6 +27,68 @@ While each module can be initialized independently, the actual ML training proce
 * Prepare the data loader for batching and feeding data to the training loop.
 * Initialization the Trainer with the model and the converted training data.
 
+
+## Introduction to Components Modules
+
+---
+
+#### 2.1 Data Processor
+
+In the machine learning pipeline, the data_processor component plays a pivotal role as a converter responsible for transforming data obtained from the initial stages of data collection and basic cleaning. Typically, this data arrives in the form of a pandas DataFrame, which is a structured and tabular representation of the dataset.
+
+The primary function of the data_processor is to convert this DataFrame into a more suitable format for machine learning tasks, which often involves transforming it into a numpy ndarray. This conversion is essential to ensure compatibility with various machine learning algorithms and techniques.
+
+**API introduction**
+
+**TimeSeriesDataProcessor**
+
+Within our project, we provide a specialized data_processor known as `TimeSeriesDataProcessor`. This component is designed specifically for handling time series data, a common and crucial data format in many machine learning applications. The `TimeSeriesDataProcessor` is engineered to perform the following key tasks:
+
+1. **Sliding Window Transformation:** It converts the original time series data in the DataFrame into a sequence of sliding windows, effectively segmenting the data into more manageable and informative chunks. This segmentation is particularly useful for capturing temporal patterns and dependencies in the data.
+
+2. **Feature Scaling:** To ensure that all features within the dataset have a consistent impact on the machine learning model, the `TimeSeriesDataProcessor` also performs feature scaling. This involves standardizing or normalizing the data, bringing it to a common scale.
+
+By utilizing the `TimeSeriesDataProcessor`, data scientists can streamline the process of preparing time series data for machine learning tasks. It simplifies the conversion from a pandas DataFrame to a structured numpy ndarray, and by incorporating sliding window transformations and feature scaling, it empowers data scientists to harness the temporal dynamics within their data effectively.
+
+
+#### 2.2 Data Loader: Bridging Data and Model
+
+In this section, we'll explore the Data Loader, a crucial part of our project that helps connect the data processed by the Data Processor to our machine learning model. Think of it as the middleman between the data and the model, ensuring everything is in the right format for our model to understand.
+
+**Converting Data Types**
+
+One of the Data Loader's primary jobs is to convert the processed data, which is initially in the form of a numpy ndarray, into a format that our model can work with efficiently. For example, if we're using PyTorch, our model needs the data in torch.Tensor format. The Data Loader handles this conversion seamlessly, making sure the data aligns perfectly with what our model expects.
+
+**Data Batching and Shuffling**
+
+But the Data Loader doesn't stop at conversion; it has another critical function. During the model's training phase, it's often helpful to process data in batches and shuffle it to improve learning. The Data Loader can take care of this too. It splits the data into manageable chunks (batches) and shuffles it, which can significantly enhance how our model learns from the data.
+
+**Extensibility with OCP**
+
+One neat thing about our DataLoader module is that it's designed with an eye on the future. It follows the Open-Closed Principle (OCP), which means it's open for extension. This allows us to add new features and capabilities to the Data Loader down the road, making it adaptable to our project's evolving needs.
+
+
+#### 2.3 Model Trainer: Executing the Machine Learning Training Loop
+
+In this section, we dive into the Model Trainer, a critical component responsible for executing the machine learning training loop. This code snippet handles the training of our model using the data processed and prepared by the previous stages, specifically the Data Processor and Data Loader. 
+
+**Training the Model**
+
+The core of this implementation lies in training the machine learning model. It provides a robust and configurable training loop, making it easy to set parameters and fine-tune the model. With this Model Trainer, you can effortlessly customize various aspects of the training process to ensure your model learns effectively from the data.
+
+**Preparing for Deployment**
+
+As the training loop progresses, the Model Trainer records essential metrics and performance data. These metrics are stored in MLflow, providing a comprehensive record of how the model performs during training. This step ensures that you have a detailed overview of your model's learning process, which is invaluable for further analysis and optimization.
+
+**Continuous Improvement**
+
+One notable feature of our Model Trainer is its adaptability. It allows for continuous improvement and model updates as new data becomes available or as the project evolves. This adaptability ensures that your model remains effective and accurate over time, aligning perfectly with the ever-changing nature of machine learning projects.
+
+In summary, the Model Trainer executes the heart of our machine learning project, handling the training loop with ease and flexibility. It not only prepares the model for deployment but also enables continuous refinement and optimization, making it an indispensable component in our machine learning pipeline.
+
+
+---
+
 ## Data Preprocessor
 
 The `Data Preprocessor` takes the raw data frame from the Fetcher and transforms it, making it suitable for training. For instance, if you're using a PyTorch NN model, the preprocessor will convert the DataFrame into `torch.Tensor`.
