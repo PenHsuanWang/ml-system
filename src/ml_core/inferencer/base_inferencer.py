@@ -17,7 +17,7 @@ class BaseInferencer:
         """Load the model from the given path."""
         raise NotImplementedError
 
-    def predict(self, input_data):
+    def predict(self, input_data, device):
         """Predict the output for the given input data."""
         raise NotImplementedError
 

@@ -42,7 +42,7 @@ def test_complete_ml_training_process_with_wrapped_serving_app():
     model = ml_training_app.get_model()
 
     ml_inferencer = src.webapp.ml_inference_serving_app.get_app()
-    ml_inferencer.set_mode(model_name="pytorch_lstm_aapl", model=model)
+    ml_inferencer.set_model_to_serving_list(model_name="pytorch_lstm_aapl", model=model)
 
     data_fetcher_app.data_fetcher["yfinance"].fetch_from_source(stock_id="AAPL", start_date="2023-02-01", end_date="2023-06-30")
     df_test = data_fetcher_app.data_fetcher["yfinance"].get_as_dataframe()

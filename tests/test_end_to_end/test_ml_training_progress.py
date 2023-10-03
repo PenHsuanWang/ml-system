@@ -84,10 +84,10 @@ def test_complete_ml_training_process():
 
     inferencer = InferencerFactory.create_inferencer("pytorch", model=model)
 
-    test_data = torch.Tensor(test_data).to(torch.device('mps'))
-    prediction = model(test_data).to('cpu').detach().numpy()
+    # test_data = torch.Tensor(test_data).to(torch.device('mps'))
+    prediction = model(torch.Tensor(test_data).to(torch.device('mps'))).to('cpu').detach().numpy()
 
-    prediction_from_inferencer = inferencer.predict(test_data).to('cpu').detach().numpy()
+    prediction_from_inferencer = inferencer.predict(test_data, device="mps")
 
     print(prediction_from_inferencer)
 

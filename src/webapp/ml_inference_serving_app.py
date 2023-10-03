@@ -1,9 +1,9 @@
 
 import threading
+import typing
 
 from mlflow.exceptions import MlflowException
 
-from src.data_io.data_fetcher.fetcher import DataFetcherFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
 from src.ml_core.inferencer.inferencer import InferencerFactory
 
@@ -12,7 +12,10 @@ class MlInferenceServingApp:
 
     """
     the ML inference serving app is a singleton class to serve the model inference process
-    storing the model in serving list, for expose model inference api to client
+    storing the model in serving list, for expose model inference api to client.
+    The set_model_* functions define the application to put model into serving list
+    load model from mlflow artifact and put into serving list is available, but need to set mlflow_agent tracking server uri first
+    The inference function is the main function to do model inference, it will get the model from serving list and do inference
 
     provide the method to client to
     1. add model from mlflow model artifact
@@ -39,7 +42,7 @@ class MlInferenceServingApp:
         pass
 
     @classmethod
-    def _is_model_exist(cls, model_name: str):
+    def _is_model_exist(cls, model_name: str) -> bool:
         """
         check if model is already in serving
         :param model_name: model name
@@ -51,7 +54,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def setup_model_inference_serving_app(cls, *args, **kwargs):
+    def setup_mlflow_agent(cls, *args, **kwargs) -> None:
         """
         set up the model inference serving app
         :return:
@@ -67,22 +70,35 @@ class MlInferenceServingApp:
 
     @classmethod
     def list_all_model_in_serving(cls):
-        return cls._model_in_serving.keys()
+        return list(cls._model_in_serving.keys())
 
     @classmethod
-    def load_original_model_from_mlflow_artifact(cls, model_name: str, model_version: str, model_stage: str = "Production"):
+    def set_model_from_mlflow_artifact_origin_flavor(cls, model_name: str, model_version=None, model_stage=None) -> bool:
         """
         load original model from mlflow artifact
         implementation in mlflow_agent, distinguish the origin model flavor by mlflow model registry
+        :param model_stage:
         :param model_name: model name
         :param model_version: model version
         :return: True if model is successfully loaded
         """
 
+        # check mlflow agent setup tracking server uri ready or not
+        if cls._mlflow_agent.mlflow_connect_tracking_server_uri is None:
+            raise ValueError("mlflow tracking server is not provided")
+
+        load_model_args = [model_name]
+        if model_version is not None:
+            load_model_args.append(model_version)
+        if model_stage is not None:
+            load_model_args.append(model_stage)
+
         if not cls._is_model_exist(model_name):
             try:
-                fetched_model = cls._mlflow_agent.load_original_model(model_name, model_version, model_stage)
+                fetched_model = cls._mlflow_agent.load_original_model(*load_model_args)
                 cls._model_in_serving[model_name] = fetched_model
+                print(f"model {model_name} is successfully saved in serving list")
+                print(f"model serving list{cls._model_in_serving.keys()}")
             except MlflowException as me:
                 print(f"load model {model_name} failed, error message: {me}")
                 return False
@@ -97,13 +113,19 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def load_pyfunc_model_from_mlflow_artifact(cls, model_name: str, model_version: str, model_stage: str = "Production"):
+    def set_model_from_mlflow_artifact_pyfunc(cls, model_name: str, model_version: str, model_stage: str = "Production") -> bool:
         """
-        load mlflow provided pyfunc model from mlflow artifact
-        :param model_name: model name
-        :param model_version: model version
-        :return: True if model is successfully loaded
+        load pyfunc model from mlflow artifact
+        implementation in mlflow_agent, distinguish the origin model flavor by mlflow model registry
+        :param model_name:
+        :param model_version:
+        :param model_stage:
+        :return:
         """
+
+        # check mlflow agent setup tracking server uri ready or not
+        if cls._mlflow_agent.mlflow_connect_tracking_server_uri is None:
+            raise ValueError("mlflow tracking server is not provided")
 
         if not cls._is_model_exist(model_name):
             try:
@@ -123,11 +145,12 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def set_mode(cls, model_name: str, model: object):
+    def set_model_to_serving_list(cls, model_name: str, model: object) -> bool:
         """
         To set the in-memory model from current python process to model serving
         add model into serving list with model name
         :param model_name:
+        :param model:
         :return:
         """
         if not cls._is_model_exist(model_name):
@@ -138,7 +161,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def remove_model_from_serving(cls, model_name: str):
+    def remove_model_from_serving_list(cls, model_name: str) -> bool:
         """
         remove model from serving
         :param model_name: model name
@@ -152,7 +175,7 @@ class MlInferenceServingApp:
             return False
 
     @classmethod
-    def inference(cls, model_name, data_input):
+    def inference(cls, model_name, data_input, device="cpu") -> typing.Any:
         """
         get the model inference result
         :param model_name: model name
@@ -163,8 +186,9 @@ class MlInferenceServingApp:
 
             # create inferencer
             model_inferencer = InferencerFactory.create_inferencer(model_flavor="pytorch", model=cls._model_in_serving[model_name])
-            return model_inferencer.predict(data_input)
+            return model_inferencer.predict(data_input, device=device)
         else:
+            print(cls._model_in_serving.keys())
             print(f"model {model_name} is not in serving")
             return None
 
