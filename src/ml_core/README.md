@@ -87,6 +87,85 @@ One notable feature of our Model Trainer is its adaptability. It allows for cont
 In summary, the Model Trainer executes the heart of our machine learning project, handling the training loop with ease and flexibility. It not only prepares the model for deployment but also enables continuous refinement and optimization, making it an indispensable component in our machine learning pipeline.
 
 
+## 3. Model Serving with the Inferencer
+
+In the context of our machine learning system, the Inferencer plays a pivotal role in our model-serving infrastructure. It is meticulously designed to manage multiple machine learning models efficiently, ensuring they are readily available for inference through a user-friendly API.
+
+**Model Storage and Serving**
+
+At its core, the Inferencer simplifies the process of storing and serving machine learning models. We've implemented a singleton pattern to guarantee that our ML system contains only one Inferencer, providing a central storage hub for models in serving. Users can seamlessly add models to the Inferencer's serving list using our API. Subsequently, they can invoke model predictions by specifying the model name and the data for prediction.
+
+**Model Serving Flexibility**
+
+Our Inferencer is adaptable to different model flavors, each with its unique prediction interface. In essence, invoking model prediction with the Inferencer entails calling `model.predict(input_data)`. However, our API abstracts this complexity, enabling users to invoke predictions simply by specifying the model name. The Inferencer takes care of selecting the desired model for inference.
+
+### Module Structure Overview
+```text
+inferencer
+├── base_inferencer.py
+├── inferencer.py
+└── pytorch_inferencer.py
+```
+
+**Understanding the Base Inferencer**
+
+Our Inferencer system's foundation lies in the `base_inferencer.py` module, which introduces the `BaseInferencer` base class. This class initializes with an optional model and offers two fundamental methods:
+
+- `_parse_model_type()`: This method parses and displays the type of the stored model, giving users insights into the model's flavor.
+- `load_model(model_path)`: Responsible for loading a model from a specified file path.
+- `predict(input_data, device)`: Executes model predictions based on the provided input data.
+
+**Concrete Implementation: PytorchModelInferencer**
+
+Our specialized implementation, the `PytorchModelInferencer`, caters specifically to PyTorch models. It inherits from the `BaseInferencer` and customizes the `predict()` method to handle PyTorch-specific model inference tasks.
+
+- `predict(input_data, device)`: This method accepts input data in the form of a NumPy array, transfers it to the designated device (e.g., GPU or CPU), conducts the model inference, and returns the output as a NumPy array.
+
+**Inferencer Factory: Simplifying Inference Creation**
+
+To streamline the creation of Inferencer instances, we've introduced the `InferencerFactory`. This factory class follows a factory pattern, allowing users to create Inferencer instances based on the provided model flavor. Currently, we support the "pytorch" flavor, designed for PyTorch models. However, our extensible design allows for easy expansion to support additional model flavors as needed.
+
+- `create_inferencer(model_flavor, **kwargs)`: This method generates an Inferencer instance tailored to the specified model flavor. For "pytorch" models, it produces a `PytorchModelInferencer` instance, configured with the provided keyword arguments.
+
+**Conclusion**
+
+The Inferencer system brings simplicity and flexibility to the process of serving machine learning models. Its adaptable architecture accommodates various model flavors, streamlining model management, loading, and inference. With the Inferencer, users can efficiently manage and serve models, making it a cornerstone of our model-serving infrastructure.
+
+
+## 4. Model Setup with the Model Factory
+
+In this section, we delve into the Model Setup component, which provides a structured approach to creating and configuring machine learning models. This system simplifies the process of defining and setting up models for various machine learning tasks.
+
+**Model Abstraction: BaseModel**
+
+At the heart of our Model Setup is the `BaseModel` abstraction class, defined in `base_model.py`. This class serves as a blueprint for all torch neural network models. It inherits from `nn.Module` and introduces two essential methods:
+
+- `forward(x: torch.Tensor) -> torch.Tensor`: This method defines the forward pass through the model, taking an input tensor `x` and returning an output tensor.
+- `get_model_hyper_parameters() -> dict`: It retrieves the model's hyper-parameters and returns them as a dictionary.
+
+**Concrete Implementation: LSTMModel**
+
+One of our concrete model implementations, the `LSTMModel`, is designed for sequence data tasks. It inherits from `BaseModel` and specializes in Long Short-Term Memory (LSTM) networks. The key attributes of this model are its input size, hidden size, and output size. Here's a brief overview:
+
+- `LSTMModel(input_size, hidden_size, output_size)`: This constructor defines the model's architecture, including the input dimension, hidden state size, and output dimension.
+
+- `forward(x: torch.Tensor) -> torch.Tensor`: This method performs a forward pass through the LSTM model, processing input data `x` through the network's layers and returning the output.
+
+- `get_model_hyper_parameters() -> dict`: It extracts and provides the model's hyper-parameters, giving users insights into its configuration.
+
+**Model Factory: Streamlined Model Creation**
+
+To simplify model creation and configuration, we've introduced the `TorchNeuralNetworkModelFactory`. This factory class employs the same design pattern as the Inferencer system, allowing users to create model instances based on the specified model type. Currently, we support the "lstm" model type, tailored for sequence data tasks.
+
+- `create_torch_nn_model(model_type, **kwargs)`: This method generates a torch neural network model instance according to the specified model type. For "lstm" models, it constructs an `LSTMModel` instance, configured with the provided keyword arguments.
+
+**Conclusion**
+
+The Model Setup component brings structure and ease to the process of defining and configuring machine learning models. It offers a versatile architecture that allows for the creation of various model types, making it a valuable asset for our machine learning tasks.
+
+In the upcoming sections, we will explore how to use the Model Setup system to create and configure models for specific machine learning applications, demonstrating its flexibility and utility.
+
+
 ---
 
 ## Data Preprocessor

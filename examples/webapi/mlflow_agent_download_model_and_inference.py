@@ -26,6 +26,7 @@ def get_model_from_mlflow_agent():
                              json={
                                 "model_info": {"model_name": "Pytorch_Model", "model_stage": "Production"}
                              })
+    # get serialized model and recompose
 
     model_bytes = response.json()['model']
     model_bytes = model_bytes.encode('latin1')

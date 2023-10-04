@@ -10,7 +10,7 @@ def setup_model_inference_serving_app(mlflow_tracking_server: str):
 
 
 def inferencer_load_and_serving_model_from_mlflow_artifact(model_name: str, model_stage: str):
-    ml_inference_app.set_model_from_mlflow_artifact_origin_flavor(model_name=model_name, model_stage=model_stage)
+    ml_inference_app.set_model_from_mlflow_artifact_origin_flavor(mlflow_model_name=model_name, model_stage=model_stage)
 
 
 if __name__ == "__main__":

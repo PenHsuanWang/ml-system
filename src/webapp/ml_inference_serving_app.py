@@ -73,13 +73,18 @@ class MlInferenceServingApp:
         return list(cls._model_in_serving.keys())
 
     @classmethod
-    def set_model_from_mlflow_artifact_origin_flavor(cls, model_name: str, model_version=None, model_stage=None) -> bool:
+    def set_model_from_mlflow_artifact_origin_flavor(cls,
+                                                     mlflow_model_name: str,
+                                                     model_version=None,
+                                                     model_stage=None,
+                                                     serving_model_name=None) -> bool:
         """
         load original model from mlflow artifact
         implementation in mlflow_agent, distinguish the origin model flavor by mlflow model registry
         :param model_stage:
-        :param model_name: model name
+        :param mlflow_model_name: model name in mlflow
         :param model_version: model version
+        :param serving_model_name: the name be put into serving list as key
         :return: True if model is successfully loaded
         """
 
@@ -87,20 +92,22 @@ class MlInferenceServingApp:
         if cls._mlflow_agent.mlflow_connect_tracking_server_uri is None:
             raise ValueError("mlflow tracking server is not provided")
 
-        load_model_args = [model_name]
+        load_model_args = [mlflow_model_name]
         if model_version is not None:
             load_model_args.append(model_version)
         if model_stage is not None:
             load_model_args.append(model_stage)
 
-        if not cls._is_model_exist(model_name):
+        if not cls._is_model_exist(mlflow_model_name):
             try:
                 fetched_model = cls._mlflow_agent.load_original_model(*load_model_args)
-                cls._model_in_serving[model_name] = fetched_model
-                print(f"model {model_name} is successfully saved in serving list")
+                # if the serving_model_name is not provided, use mlflow model_name as serving model name
+                serving_model_name = serving_model_name or mlflow_model_name
+                cls._model_in_serving[serving_model_name] = fetched_model
+                print(f"model {mlflow_model_name} is successfully saved in serving list")
                 print(f"model serving list{cls._model_in_serving.keys()}")
             except MlflowException as me:
-                print(f"load model {model_name} failed, error message: {me}")
+                print(f"load model {mlflow_model_name} failed, error message: {me}")
                 return False
 
             except RuntimeError as re:
@@ -109,7 +116,7 @@ class MlInferenceServingApp:
 
             return True
         else:
-            print(f"model {model_name} is already in serving")
+            print(f"model {mlflow_model_name} is already in serving")
             return False
 
     @classmethod

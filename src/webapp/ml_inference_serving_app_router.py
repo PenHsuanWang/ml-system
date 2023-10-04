@@ -78,16 +78,17 @@ def set_model_from_mlflow_artifact_origin_flavor(
     :return: response
     """
     model_info = request.model_info
-    model_name = model_info.get("model_name", None)
+    mlflow_model_name = model_info.get("mlflow_model_name", None)
     model_version = model_info.get("model_version", None)
     model_stage = model_info.get("model_stage", None)
-    if model_name is None:
+    serving_model_name = model_info.get("serving_model_name", None)
+
+    if mlflow_model_name is None:
         return JSONResponse(content={"message": "model name is not provided"})
-    if ml_inference_serving_app.set_model_from_mlflow_artifact_origin_flavor(
-        model_name=model_name,
-        model_version=model_version,
-        model_stage=model_stage
-    ):
+    if ml_inference_serving_app.set_model_from_mlflow_artifact_origin_flavor(mlflow_model_name=mlflow_model_name,
+                                                                             model_version=model_version,
+                                                                             model_stage=model_stage,
+                                                                             serving_model_name=serving_model_name):
         return JSONResponse(content={"message": "success"})
     else:
         return JSONResponse(content={"message": f"Fail to setup model {model_info} from mlflow artifact server"})
