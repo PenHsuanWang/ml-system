@@ -1,6 +1,8 @@
 """
 Developing the serving app to expose mlflow client model downloader ro REST api endpoint
 """
+import io
+import torch
 
 from fastapi import APIRouter, Body, Depends
 from fastapi.responses import JSONResponse
@@ -16,15 +18,11 @@ class SetMLFlowTrackingUriBody(BaseModel):
 
 
 class DownloadMLFlowPyfuncModelBody(BaseModel):
-    model_name: str
-    model_version: int
-    model_stage: str
+    model_info: dict
 
 
 class DownloadMLFlowOriginalModelBody(BaseModel):
-    model_name: str
-    model_version: int
-    model_stage: str
+    model_info: dict
 
 
 # Define the router for the api endpoint
@@ -85,9 +83,11 @@ def download_mlflow_pyfunc_model(
     :param request: DownloadMLFlowPyfuncModelBody
     :return: JSONResponse
     """
-    model_name = request.model_name
-    model_version = request.model_version
-    model_stage = request.model_stage
+
+    kwargs = request.model_info
+    model_name = kwargs.get("model_name", None)
+    model_version = kwargs.get("model_version", None)
+    model_stage = kwargs.get("model_stage", None)
 
     try:
         model = mlflow_model_downloader_app.download_mlflow_pyfunc_model(model_name, model_version, model_stage)
@@ -118,17 +118,29 @@ def download_mlflow_original_model(
     :param request: DownloadMLFlowOriginalModelBody
     :return: JSONResponse
     """
-    model_name = request.model_name
-    model_version = request.model_version
-    model_stage = request.model_stage
+
+    kwargs = request.model_info
+    model_name = kwargs.get("model_name", None)
+    model_version = kwargs.get("model_version", None)
+    model_stage = kwargs.get("model_stage", None)
 
     try:
         model = mlflow_model_downloader_app.download_mlflow_original_model(model_name, model_version, model_stage)
+
+        print(type(model))
+
+        print("fetch model from mlflow original model downloader")
+
+        # serialize the model in memory to return to client
+        buffer = io.BytesIO()
+        torch.save(model.state_dict(), buffer)
+        model_bytes = buffer.getvalue()
+
         return JSONResponse(
             status_code=200,
             content={
                 "message": "mlflow original model is downloaded",
-                "model": model
+                "model": model_bytes.decode('latin1')
             }
         )
     except Exception as e:

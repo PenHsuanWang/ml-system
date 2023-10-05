@@ -200,7 +200,7 @@ class MLFlowClientModelAgent(MLFlowClient):
         if model_stage:
             stage_latest_version = cls.get_model_latest_version(model_name, model_stage)
             if model_version:
-                if model_version == stage_latest_version:
+                if int(model_version) == int(stage_latest_version):
                     pass
                 else:
                     print(

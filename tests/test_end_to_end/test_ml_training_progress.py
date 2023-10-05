@@ -1,7 +1,11 @@
 from src.data_io.data_fetcher.fetcher import DataFetcherFactory
 from src.ml_core.data_processor.time_series_data_processor import TimeSeriesDataProcessor
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
+from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.trainer.trainer import TrainerFactory
+from src.ml_core.inferencer.inferencer import InferencerFactory
+
+from torch.utils.data import DataLoader
 
 import torch
 
@@ -29,15 +33,24 @@ def test_complete_ml_training_process():
         print(re)
         assert False
 
-    train_tensor = data_processor.get_training_data_x()
-    train_target_tensor = data_processor.get_training_target_y()
+    train_data = data_processor.get_training_data_x()
+    train_target = data_processor.get_training_target_y()
 
-    test_tensor = data_processor.get_testing_data_x()
-    test_target_tensor = data_processor.get_testing_target_y()
+    test_data = data_processor.get_testing_data_x()
+    test_target = data_processor.get_testing_target_y()
 
-    print(train_tensor.shape)
-    print(train_target_tensor.shape)
-    # print(test_tensor.shape)
+    print(train_data.shape)
+    print(train_target.shape)
+
+    time_series_dataset = TimeSeriesDataset(
+        train_data,
+        train_target
+    )
+    torch_dataloader = DataLoader(
+        time_series_dataset,
+        batch_size=len(time_series_dataset),
+        shuffle=False
+    )
 
     model = TorchNeuralNetworkModelFactory.create_torch_nn_model(
         "lstm",
@@ -52,23 +65,33 @@ def test_complete_ml_training_process():
         criterion=torch.nn.MSELoss(),
         optimizer=torch.optim.Adam(model.parameters(), lr=0.001),
         device=torch.device('mps'),
-        # training_data=train_tensor,
-        # training_labels=train_target_tensor
+        # training_data=train_data,
+        # training_labels=train_target
     )
 
     trainer.set_model(model)
-    trainer.set_training_data_loader(train_tensor, train_target_tensor)
+    trainer.set_training_data_loader(torch_dataloader)
 
     try:
-        trainer.run_training_loop(epochs=300)
+        trainer.run_training_loop(epochs=20)
     except RuntimeError as re:
         print(re)
         assert False
 
     model.eval()
 
-    test_tensor = test_tensor.to(torch.device('mps'))
-    prediction = model(test_tensor).to('cpu').detach().numpy()
+    print(type(model))
+
+    inferencer = InferencerFactory.create_inferencer("pytorch", model=model)
+
+    # test_data = torch.Tensor(test_data).to(torch.device('mps'))
+    prediction = model(torch.Tensor(test_data).to(torch.device('mps'))).to('cpu').detach().numpy()
+
+    prediction_from_inferencer = inferencer.predict(test_data, device="mps")
+
+    print(prediction_from_inferencer)
+
+    assert prediction_from_inferencer.all() == prediction.all()
 
     prediction_output = data_processor.inverse_testing_scaler(
         data=prediction,
@@ -76,7 +99,7 @@ def test_complete_ml_training_process():
     )
 
     test_target = data_processor.inverse_testing_scaler(
-        data=test_target_tensor.numpy(),
+        data=test_target,
         scaler_by_column_name='Close'
     )
 
