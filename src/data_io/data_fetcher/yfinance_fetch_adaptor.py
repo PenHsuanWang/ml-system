@@ -33,11 +33,11 @@ class YahooFinanceAdaptor(BaseDataFetcher):
         end_date = kwargs["end_date"]
 
         # check the stock id is valid or not
-        try:
-            if not yf.Ticker(stock_id).info:
-                raise ValueError(f"Invalid stock id: {stock_id}")
-        except HTTPError:
-            raise ValueError(f"Invalid stock id: {stock_id}")
+        # try:
+        #     if not yf.Ticker(stock_id).info:
+        #         raise ValueError(f"Invalid stock id: {stock_id}")
+        # except HTTPError:
+        #     raise ValueError(f"Invalid stock id: {stock_id}")
 
 
         # check the date format match to yfinance or not
