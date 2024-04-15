@@ -2,7 +2,34 @@
 
 ## Introduction
 
-This system is designed to run a robust machine learning service that performs model training and inference serving. The service is built on top of the FastAPI framework, providing RESTful API endpoints for clients to manage machine learning jobs. This README will guide developers and users through the system's components and functionalities.
+This system is designed to operate a robust machine learning service, performing both model training and inference serving. Built on top of the FastAPI framework, the service provides RESTful API endpoints for clients to manage machine learning jobs. This README will guide developers and users through the system's components and functionalities.
+
+### High Level Machine Learning workflow
+
+The high-level workflow of the machine learning includes the data fetching, data processing, model training, and model serving. The system is designed to be modular and extensible, allowing for easy integration of new machine learning models and datasets. The system is also designed to be scalable, allowing for multiple machine learning jobs to be run concurrently.
+
+![ml_system_modular_design](https://hackmd.io/_uploads/SkKzUocgR.png)
+
+The data processing and model design components are independent and can be replaced with different implementations. The system is designed to be modular and extensible, allowing for easy integration of new machine learning models and datasets. The system is also designed to be scalable, allowing for multiple machine learning jobs to be run concurrently.
+
+This system is designed to be modular and extensible, facilitating easy integration of new machine learning models and datasets. The system is also designed to be scalable, allowing for multiple machine learning jobs to be run concurrently. Each part of the machine learning workflow can be reconfigured and replaced with a different implementation.
+
+### High Level Module Design
+
+The high-level module design of this project can be divided into Basic Components, Component Manager, and User Interface.
+
+#### The basic components of the system include:
+* DataFetcher : responsible for fetching data from the source. Pass the raw data to the next stage.
+* DataAnalyzer: for implementing data analysis and feature engineering (EDA).
+* Model: for implementing the machine learning model. Based on the requirement, the model can be implemented with different framework.
+* Trainer: for implementing the training loop. The trainer will take the model and data as input and output the trained model.
+
+#### The components' manager:
+The basic components will be created based on requirements and composed by the designer, which could be complex in certain cases. Thus the component manager responsible for organizing created basic component and compose to a complete Machine Learning Entity.
+Multiple components, such as data analyzers, can be created as per the specific training requirements. Put all created data analyzer components into a pool, and the manager will take care of object access from the pools and apply them to the pipeline when needed.
+
+#### The User Interface:
+The user interface is the entry point of the system. It will interact with the components manager and provide the service to the user. The user interface will provide the RESTful API for the user to interact with the system. The user interface will also provide the web interface for the user to interact with the system.
 
 ### System Overview
 
