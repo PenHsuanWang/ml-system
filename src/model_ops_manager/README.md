@@ -19,23 +19,72 @@ This subpackage is designed as an interface to interact with the MLflow server. 
 
 This package is designed using the Strategy Pattern. Several MLflow provided API functions are implemented in separate Python modules, also known as strategy classes. The `mlflow_agent.py` is the context class, and the implemented modules are the strategy classes. `mlflow_agent.py` serves as the single interface from the ML system side, while the implemented modules are responsible for the implementation of the MLflow API functions. The `mlflow_agent.py` is designed as a singleton class, and the implemented modules are also designed as singleton classes, with the singleton pattern implemented by the `singleton_meta.py` module.
 
-## Function Implementation in Strategy Classes
+### Features
 
-### `configuration.py`
+- **MLFlow Client**: Implements a Singleton design pattern to manage MLFlow client instances efficiently, ensuring a consistent and thread-safe interaction with the MLFlow server across various parts of the application.
+- **Model Agent**: Facilitates detailed interactions with the MLFlow server, allowing users to fetch model information, check model versions, and compose model URIs for easy retrieval and deployment.
+- **Error Handling**: Rigorous error checking and handling to ensure stability and reliability, particularly in scenarios involving network communication and data integrity.
+- **Configuration Management**: Provides mechanisms to configure and initialize the MLFlow tracking URI and other essential parameters dynamically, enhancing the adaptability of the agent to different environments.
 
-The `MLFlowConfiguration` class provides a method to set the MLflow tracking URI.
+### Features and Functionalities of `client.py` Module
 
-### `tracking.py`
+**1. Singleton MLFlow Client**
+- **Single Instance Management**: Utilizes a Singleton pattern for the MLFlow client, ensuring only one instance is created and used across the application, enhancing consistency and reducing connection overhead.
+- **Resource Optimization**: Reuses the same MLFlow client to optimize resource utilization, beneficial in resource-constrained environments.
 
-The `MLFlowTracking` class offers methods for starting and ending tracking runs, as well as logging parameters and metrics.
+**2. Initialization and Configuration**
+- **Pre-Initialization Checks**: Checks if the tracking URI is set before initializing the client, preventing runtime configuration errors.
+- **Easy Setup**: Provides the `init_mlflow_client` method to abstract the complexity of setting up an MLFlow client, ensuring correct configuration before proceeding.
 
-### `registration.py`
+**3. Model Interaction Functions**
+- **Model URI Composition**: Offers the `compose_model_uri` method to easily retrieve URIs for model artifacts, handling the logic of determining the latest model version or using a specific version.
+- **Version Checking and Validation**: Includes built-in checks to ensure that the requested model version matches the expected version, particularly important for specific stages.
 
-The `MLFlowModelRegistry` class handles the registration of PyTorch models with MLflow.
+**4. Error Handling and Feedback**
+- **Informative Error Messages**: Raises exceptions with clear messages for issues like unset tracking URIs or version mismatches, aiding quick resolution.
+- **Robust Exception Management**: Manages exceptions related to MLFlow interactions, helping applications using the package maintain stability.
 
-### `client.py`
+**5. Practical and User-Friendly API**
+- **High-Level Abstractions**: Methods like client initialization and model URI composition provide high-level abstractions over the MLFlow API, simplifying complex operations.
+- **Integration Ease**: The module design facilitates easy integration with existing Python applications, offering clear entry points and adaptable methods.
 
-The `MLFlowClient` class in the `client.py` module interacts with MLflow's tracking server, allowing you to retrieve model versions and other related operations.
+### Example Python Script for Usage Demonstration
+
+```python
+# Import necessary classes from your package
+from your_package_name import MLFlowClientModelAgent
+
+def main():
+    # Set the MLFlow tracking URI
+    mlflow_tracking_uri = "http://your_mlflow_server_uri"
+    mlflow.set_tracking_uri(mlflow_tracking_uri)
+
+    # Initialize the MLFlow client
+    mlflow_client = MLFlowClientModelAgent()
+    mlflow_client.init_mlflow_client()
+
+    # Specify the model name and the stage you are interested in
+    model_name = "Example_Model"
+    model_stage = "Production"  # Can be "None", "Staging", "Production", or "Archived"
+
+    # Fetch the latest version of the model at the specified stage
+    try:
+        model_version = mlflow_client.get_model_latest_version(model_name, model_stage)
+        print(f"Latest version for {model_name} at stage {model_stage} is: {model_version}")
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    # Compose the model URI for the latest version
+    try:
+        model_uri = mlflow_client.compose_model_uri(model_name, model_version)
+        print(f"Model URI for version {model_version} of {model_name}: {model_uri}")
+    except ValueError as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
+```
 
 ## Usage
 

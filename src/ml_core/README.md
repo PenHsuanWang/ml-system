@@ -8,6 +8,43 @@ Moreover, as machine learning projects evolve and mature, maintaining and extend
 
 Recognizing these challenges, our project features the Machine Learning Process Core module, which adopts Object-Oriented Programming (OOP) principles. This module reimagines each stage of the machine learning pipeline as a distinct, reusable operation. This approach simplifies the development process, enhances maintainability, and facilitates future iterations of the machine learning project. By encapsulating each stage as a discrete unit, data scientists can focus on refining individual components, enabling seamless integration into the broader machine learning workflow.
 
+
+## Getting Started
+
+### Installation
+
+To set up the machine learning system, follow these steps:
+
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Start the server:
+   ```bash
+   python run_server.py
+   ```
+API Documentation
+Each API endpoint in our system serves a specific purpose:
+
+* Data I/O API: Handles data fetching and sinking operations.
+* Model Training API: Manages training machine learning models.
+* Inference API: Serves trained models for making predictions.
+* Model Management API: Manages model lifecycle in MLFlow.
+
+Example API call for fetching data:
+```bash
+curl -X GET http://localhost:8010/data-fetch
+```
+
+Expected response:
+
+```json
+{
+  "status": "success",
+  "message": "Data fetched successfully."
+}
+```
+
 ## ML processes components modules
 
 The ML processes components modules considered the those stage afterword data fetching, that say, the module in `ml_core` package only responsible for operating collected raw data.
