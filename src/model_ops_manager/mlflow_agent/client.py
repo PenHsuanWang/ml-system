@@ -220,6 +220,47 @@ class MLFlowClientModelAgent(MLFlowClient):
         )
         return download_model_uri
 
+    @classmethod
+    def list_all_registered_models(cls):
+        """
+        List all registered models from the MLFlow model store.
+        Returns a list of dictionaries, each containing model details.
+        """
+        cls.init_mlflow_client()  # Ensure the MLflow client is initialized
+        try:
+            registered_models = cls.mlflow_client.list_registered_models()
+            models = [{
+                "name": model.name,
+                "latest_versions": [{
+                    "version": version.version,
+                    "stage": version.current_stage,
+                    "description": version.description,
+                } for version in model.latest_versions]
+            } for model in registered_models]
+            return models
+        except MlflowException as e:
+            print(f"Error fetching registered models: {e}")
+            raise
+
+    @classmethod
+    def get_model_details(cls, model_name: str, model_version: int = None) -> dict:
+        """
+        Fetches details of a specific model version including parameters, metrics, and model structure.
+        """
+        if model_version is None:
+            model_version = cls.get_model_latest_version(model_name)
+
+        model_details = cls.mlflow_client.get_model_version(name=model_name, version=model_version)
+        run_id = model_details.run_id
+        run_data = cls.mlflow_client.get_run(run_id)
+
+        details = {
+            "parameters": run_data.data.params,
+            "metrics": run_data.data.metrics,
+            # Assuming model architecture or other relevant details are logged as tags
+            "architecture": run_data.data.tags.get("architecture", "No architecture info"),
+        }
+        return details
 
 
 if __name__ == "__main__":

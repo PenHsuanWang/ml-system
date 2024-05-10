@@ -3,6 +3,7 @@ from torch.utils.data.dataloader import DataLoader
 from src.ml_core.trainer.base_trainer import BaseTrainer
 from src.model_ops_manager.mlflow_agent.mlflow_agent import NullMLFlowAgent
 
+
 class TorchNeuralNetworkTrainer(BaseTrainer):
 
     """
@@ -64,8 +65,6 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         # to check the model and training data is ready
         if self._model is None:
             raise RuntimeError("Model is not provided.")
-        # if self._training_data is None or self._training_labels is None:
-        #     raise RuntimeError("Training data or label is not provided.")
 
         self._mlflow_agent.start_run(
             experiment_name="ml-system-dev-test",
@@ -80,9 +79,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         self._model.train()
 
         for epoch in range(epochs):
-
             for i, data in enumerate(self._training_data_loader):
-
                 x, y = data
                 x = x.to(self._device)
                 y = y.to(self._device)
@@ -97,17 +94,15 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
                 self._optimizer.step()
 
                 """If the mlflow agent is provided, log the loss"""
-                self._mlflow_agent.log_metric("loss", loss.item())
+                self._mlflow_agent.log_metric("loss", loss.item(), step=epoch)
 
                 print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
+
+        # Log model architecture
+        self._mlflow_agent.log_param("model_architecture", str(self._model))
 
         """If the mlflow agent is provided, end the mlflow run"""
 
         self._mlflow_agent.register_model(self._model, "Pytorch_Model")
-
         self._mlflow_agent.end_run()
-
         print("Training done")
-
-
-
