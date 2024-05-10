@@ -26,6 +26,18 @@ This package is designed using the Strategy Pattern. Several MLflow provided API
 - **Error Handling**: Rigorous error checking and handling to ensure stability and reliability, particularly in scenarios involving network communication and data integrity.
 - **Configuration Management**: Provides mechanisms to configure and initialize the MLFlow tracking URI and other essential parameters dynamically, enhancing the adaptability of the agent to different environments.
 
+
+## Module Descriptions
+
+- **client.py**: Manages client interactions with the MLflow server, including initializing and managing session details.
+- **configuration.py**: Handles configuration settings for the MLflow agent, reading from environment or config files.
+- **mlflow_agent.py**: The central coordinator for the MLflow agent, integrating various modules into a cohesive interface.
+- **model_downloader.py**: Facilitates the downloading of MLflow models, ensuring models are fetched and stored appropriately.
+- **registration.py**: Provides functionalities for registering new models with the MLflow tracking server.
+- **singleton_meta.py**: Implements a singleton metaclass that ensures a class has only one instance in any given Python process.
+- **tracking.py**: Supports tracking ML experiments, recording metrics, parameters, and models.
+
+
 ### Features and Functionalities of `client.py` Module
 
 **1. Singleton MLFlow Client**
@@ -48,43 +60,58 @@ This package is designed using the Strategy Pattern. Several MLflow provided API
 - **High-Level Abstractions**: Methods like client initialization and model URI composition provide high-level abstractions over the MLFlow API, simplifying complex operations.
 - **Integration Ease**: The module design facilitates easy integration with existing Python applications, offering clear entry points and adaptable methods.
 
-### Example Python Script for Usage Demonstration
+## Usage Overview
+
+To effectively utilize the MLFlow Manager package, you can engage with it at different levels depending on your project needs:
+
+### Basic Usage
+
+For general interactions with the MLflow server, such as tracking runs, logging parameters, and registering models:
 
 ```python
-# Import necessary classes from your package
+import mlflow_agent.client as mlflow_client
+
+# Set the MLflow tracking URI
+mlflow_client.MLFlowConfiguration.set_tracking_uri("http://localhost:5001")
+
+# Create an MLFlowClient instance
+client = mlflow_client.MLFlowClient()
+
+# Start a new run and log parameters
+with mlflow.start_run():
+    mlflow.log_param("param", "value")
+    mlflow.log_metric("metric", 123)
+
+# Register a model
+mlflow.pytorch.log_model(pytorch_model, "model_path")
+```
+
+### Advanced Model Interaction
+
+For specific tasks related to model version management and URI composition:
+
+```python
 from your_package_name import MLFlowClientModelAgent
 
 def main():
-    # Set the MLFlow tracking URI
-    mlflow_tracking_uri = "http://your_mlflow_server_uri"
-    mlflow.set_tracking_uri(mlflow_tracking_uri)
-
-    # Initialize the MLFlow client
+    # Initialize the MLFlow client with a specific tracking URI
+    mlflow.set_tracking_uri("http://your_mlflow_server_uri")
     mlflow_client = MLFlowClientModelAgent()
     mlflow_client.init_mlflow_client()
 
-    # Specify the model name and the stage you are interested in
+    # Fetch the latest version of the model and compose its download URI
     model_name = "Example_Model"
-    model_stage = "Production"  # Can be "None", "Staging", "Production", or "Archived"
-
-    # Fetch the latest version of the model at the specified stage
-    try:
-        model_version = mlflow_client.get_model_latest_version(model_name, model_stage)
-        print(f"Latest version for {model_name} at stage {model_stage} is: {model_version}")
-    except ValueError as e:
-        print(f"Error: {e}")
-        return
-
-    # Compose the model URI for the latest version
-    try:
-        model_uri = mlflow_client.compose_model_uri(model_name, model_version)
-        print(f"Model URI for version {model_version} of {model_name}: {model_uri}")
-    except ValueError as e:
-        print(f"Error: {e}")
+    model_stage = "Production"
+    model_version = mlflow_client.get_model_latest_version(model_name, model_stage)
+    model_uri = mlflow_client.compose_model_uri(model_name, model_version)
+    print("Model URI:", model_uri)
 
 if __name__ == "__main__":
     main()
 ```
+
+This structured approach helps users navigate the package's capabilities more efficiently and aligns with their specific needs, whether they are managing general MLflow tasks or focusing on detailed model interactions.
+
 
 ## Usage
 
