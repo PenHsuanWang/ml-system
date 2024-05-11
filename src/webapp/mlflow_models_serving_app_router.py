@@ -42,9 +42,8 @@ def get_mlflow_models(service: MLFlowModelsService = Depends(get_mlflow_models_s
         models = service.list_models()
         return models
     except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"message": str(e.detail)})
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
     except Exception as e:
-        # Catch-all for any other unexpected errors
         return JSONResponse(status_code=500, content={"message": "Internal server error", "error": str(e)})
 
 
@@ -72,6 +71,6 @@ def compare_mlflow_models(model_name1: str, version1: int, model_name2: str, ver
         comparison_result = service.get_model_comparison(model_name1, version1, model_name2, version2)
         return comparison_result
     except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"message": str(e.detail)})
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
     except Exception as e:
         return JSONResponse(status_code=500, content={"message": "Internal server error", "error": str(e)})

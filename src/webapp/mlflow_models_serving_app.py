@@ -1,5 +1,7 @@
 import threading
+import shap
 from fastapi import HTTPException
+from mlflow.exceptions import MlflowException
 from src.model_ops_manager.mlflow_agent.client import MLFlowClientModelAgent
 
 
@@ -45,6 +47,8 @@ class MLFlowModelsService:
         """
         try:
             return self.client.list_all_registered_models()
+        except MlflowException as me:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch models from MLflow: {str(me)}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -66,15 +70,18 @@ class MLFlowModelsService:
         :return: A dictionary containing the comparison of parameters, metrics, and architecture of the two models.
         :rtype: dict
         """
-        details1 = self.client.get_model_details(model_name1, version1)
-        details2 = self.client.get_model_details(model_name2, version2)
-        return {
-            "comparison": {
-                "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
-                "metrics": self.compare_dicts(details1["metrics"], details2["metrics"]),
-                "architecture": self.compare_values(details1["architecture"], details2["architecture"])
+        try:
+            details1 = self.client.get_model_details(model_name1, version1)
+            details2 = self.client.get_model_details(model_name2, version2)
+            return {
+                "comparison": {
+                    "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
+                    "metrics": self.compare_dicts(details1["metrics"], details2["metrics"]),
+                    "architecture": self.compare_values(details1["architecture"], details2["architecture"])
+                }
             }
-        }
+        except MlflowException as e:
+            raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
 
     @staticmethod
     def compare_dicts(dict1, dict2):
@@ -91,6 +98,8 @@ class MLFlowModelsService:
         :return: A dictionary containing the comparison of the two dictionaries.
         :rtype: dict
         """
+        if not all(isinstance(d, dict) for d in [dict1, dict2]):
+            raise ValueError("Both inputs must be dictionaries.")
         keys = set(dict1.keys()).union(dict2.keys())
         result = {}
         for key in keys:
@@ -112,8 +121,45 @@ class MLFlowModelsService:
         :return: A string if the values are the same, or a dictionary with the values if they are different.
         :rtype: str or dict
         """
+        if not isinstance(val1, (str, int, float)) or not isinstance(val2, (str, int, float)):
+            raise ValueError("Both values must be of type str, int, or float.")
         return "Same" if val1 == val2 else {"model1": val1, "model2": val2}
 
+    def explain_model(self, model_name: str, version: int, X):
+        """
+        Generate explanations for a model.
+
+        This method retrieves the specified model from MLFlow, generates SHAP values, feature importances, or partial dependence plots for the model, and returns these explanations.
+
+        :param model_name: The name of the model.
+        :type model_name: str
+        :param version: The version of the model.
+        :type version: int
+        :param X: The input data for which to compute the SHAP values.
+        :type X: pandas.DataFrame or numpy.ndarray
+        :return: The generated model explanations.
+        :rtype: dict
+        """
+        model = self.client.get_model(model_name, version)
+
+        # Calculate SHAP values
+        explainer = shap.Explainer(model)
+        shap_values = explainer.shap_values(X)
+
+        # Get feature importances
+        if isinstance(model, RandomForestRegressor):
+            importances = model.feature_importances_
+        else:
+            importances = None
+
+        # Generate partial dependence plots
+        pdp_results = partial_dependence(model, X, range(X.shape[1]))
+
+        return {
+            'shap_values': shap_values,
+            'feature_importances': importances,
+            'pdp': pdp_results
+        }
 
 def get_mlflow_models_service():
     """
