@@ -1,9 +1,12 @@
 import threading
 import shap
+import numpy as np
+import pandas as pd
 from fastapi import HTTPException
 from mlflow.exceptions import MlflowException
-from src.model_ops_manager.mlflow_agent.client import MLFlowClientModelAgent
-
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.inspection import partial_dependence
+from src.model_ops_manager.mlflow_agent.model_downloader import MLFlowClientModelLoader
 
 class MLFlowModelsService:
     _instance = None
@@ -31,7 +34,7 @@ class MLFlowModelsService:
         This method initializes the MLFlow client if the instance has not been initialized.
         """
         if not self._initialized:
-            self.client = MLFlowClientModelAgent
+            self.client = MLFlowClientModelLoader
             self.client.init_mlflow_client()
             self._initialized = True
 
@@ -129,7 +132,9 @@ class MLFlowModelsService:
         """
         Generate explanations for a model.
 
-        This method retrieves the specified model from MLFlow, generates SHAP values, feature importances, or partial dependence plots for the model, and returns these explanations.
+        This method retrieves the specified model from MLFlow using the custom methods,
+        generates SHAP values, feature importances, or partial dependence plots for the model,
+        and returns these explanations.
 
         :param model_name: The name of the model.
         :type model_name: str
@@ -139,21 +144,35 @@ class MLFlowModelsService:
         :type X: pandas.DataFrame or numpy.ndarray
         :return: The generated model explanations.
         :rtype: dict
+        :raises HTTPException: If the model cannot be explained.
         """
-        model = self.client.get_model(model_name, version)
+        try:
+            model_uri = self.client.get_model_download_source_uri(model_name, model_version=version)
+            model = self.client.load_original_model(model_uri)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve model: {str(e)}")
+
+        if not isinstance(X, (pd.DataFrame, np.ndarray)):
+            raise ValueError("X should be a pandas DataFrame or numpy ndarray")
 
         # Calculate SHAP values
-        explainer = shap.Explainer(model)
-        shap_values = explainer.shap_values(X)
+        try:
+            if isinstance(model, RandomForestRegressor):
+                explainer = shap.TreeExplainer(model)
+            else:
+                explainer = shap.KernelExplainer(model.predict, X)
+            shap_values = explainer.shap_values(X)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to compute SHAP values: {str(e)}")
 
         # Get feature importances
-        if isinstance(model, RandomForestRegressor):
-            importances = model.feature_importances_
-        else:
-            importances = None
+        importances = getattr(model, "feature_importances_", None)
 
         # Generate partial dependence plots
-        pdp_results = partial_dependence(model, X, range(X.shape[1]))
+        try:
+            pdp_results = partial_dependence(model, X, np.arange(X.shape[1]))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to compute partial dependence plots: {str(e)}")
 
         return {
             'shap_values': shap_values,
