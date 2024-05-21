@@ -243,9 +243,17 @@ class MLFlowClientModelAgent(MLFlowClient):
             raise
 
     @classmethod
+    def get_training_data_info(cls, run_id: str) -> dict:
+        """
+        Fetch training data information logged during the training run.
+        """
+        run_data = cls.mlflow_client.get_run(run_id)
+        return run_data.data.params.get("training_data_info", "No training data info")
+
+    @classmethod
     def get_model_details(cls, model_name: str, model_version: int = None) -> dict:
         """
-        Fetches details of a specific model version including parameters, metrics, and model structure.
+        Fetch details of a specific model version including parameters, metrics, and model structure.
         """
         if model_version is None:
             model_version = cls.get_model_latest_version(model_name)
@@ -257,7 +265,7 @@ class MLFlowClientModelAgent(MLFlowClient):
         details = {
             "parameters": run_data.data.params,
             "metrics": run_data.data.metrics,
-            # Assuming model architecture or other relevant details are logged as tags
+            "training_data_info": cls.get_training_data_info(run_id),
             "architecture": run_data.data.tags.get("architecture", "No architecture info"),
         }
         return details
