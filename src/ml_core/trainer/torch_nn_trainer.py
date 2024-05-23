@@ -13,29 +13,39 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
     def __init__(self, criterion, optimizer, device,
                  model=None,
                  training_data_loader=None,
-                 mlflow_agent=NullMLFlowAgent()
+                 mlflow_agent=NullMLFlowAgent(),
+                 track_hyperparameters=True,
+                 track_training_data_info=True,
+                 track_metrics=True,
+                 track_model_architecture=True
                  ):
         """
         Construction of a pytorch neural network trainer, provide basic information for training
         the parts of mlflow_agent is using for tracking and registering the model to MLFlow server.
-        The mlflow_agent should be passed by the outer scpoe, if not, the NullMLFlowAgent will be used.
-        The NullMLFlowAgent is a dummy agent, which will not do anything to let the following training process works
+        The mlflow_agent should be passed by the outer scope, if not, the NullMLFlowAgent will be used.
+        The NullMLFlowAgent is a dummy agent, which will not do anything to let the following training process work
         without mlflow_agent.
-        :param criterion:
-        :param optimizer:
-        :param device:
-        :param model:
-        :param training_data:
-        :param training_labels:
-        :param mlflow_agent: Optional, the agent for tracking and registering the model to MLFlow server.
+        :param criterion: The loss function used for training
+        :param optimizer: The optimizer used for training
+        :param device: The device on which the model will be trained (e.g., 'cpu' or 'cuda')
+        :param model: The PyTorch model to be trained
+        :param training_data_loader: The DataLoader for the training dataset
+        :param mlflow_agent: Optional, the agent for tracking and registering the model to MLFlow server
+        :param track_hyperparameters: Boolean flag to track hyperparameters
+        :param track_training_data_info: Boolean flag to track training data information
+        :param track_metrics: Boolean flag to track metrics
+        :param track_model_architecture: Boolean flag to track model architecture
         """
         super(TorchNeuralNetworkTrainer, self).__init__(model)
         self._criterion = criterion
         self._optimizer = optimizer
         self._device = device
         self._mlflow_agent = mlflow_agent
-
         self._training_data_loader = training_data_loader
+        self._track_hyperparameters = track_hyperparameters
+        self._track_training_data_info = track_training_data_info
+        self._track_metrics = track_metrics
+        self._track_model_architecture = track_model_architecture
 
     def set_model(self, model):
         """
@@ -56,13 +66,25 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         """
         self._training_data_loader = training_data_loader
 
+    def log_training_data_info(self):
+        """
+        Log the information about the training data
+        :return: None
+        """
+        training_data_info = {
+            "num_samples": len(self._training_data_loader.dataset),
+            "batch_size": self._training_data_loader.batch_size,
+            # Add more data-related info if needed
+        }
+        self._mlflow_agent.log_params_many(training_data_info)
+
     def run_training_loop(self, epochs: int) -> None:
         """
         Implement the training logic and the process pipeline
-        :param epochs:
-        :return:
+        :param epochs: The number of epochs to train the model
+        :return: None
         """
-        # to check the model and training data is ready
+        # Check if the model and training data are ready
         if self._model is None:
             raise RuntimeError("Model is not provided.")
 
@@ -71,9 +93,14 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
             run_name="Pytorch Run"
         )
 
-        # extract the model hyperparameters from the model
-        model_hyper_parameters = self._model.get_model_hyper_parameters()
-        self._mlflow_agent.log_params_many(model_hyper_parameters)
+        if self._track_hyperparameters:
+            # Log model hyperparameters
+            model_hyper_parameters = self._model.get_model_hyper_parameters()
+            self._mlflow_agent.log_params_many(model_hyper_parameters)
+
+        if self._track_training_data_info:
+            # Log training data info
+            self.log_training_data_info()
 
         print(f"Training the model for {epochs} epochs")
         self._model.train()
@@ -93,16 +120,17 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
                 loss.backward()
                 self._optimizer.step()
 
-                """If the mlflow agent is provided, log the loss"""
-                self._mlflow_agent.log_metric("loss", loss.item(), step=epoch)
+                if self._track_metrics:
+                    # Log loss metric
+                    self._mlflow_agent.log_metric("loss", loss.item(), step=epoch)
 
                 print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
 
-        # Log model architecture
-        self._mlflow_agent.log_param("model_architecture", str(self._model))
+        if self._track_model_architecture:
+            # Log model architecture
+            self._mlflow_agent.log_param("model_architecture", str(self._model))
 
-        """If the mlflow agent is provided, end the mlflow run"""
-
+        # Register the model
         self._mlflow_agent.register_model(self._model, "Pytorch_Model")
         self._mlflow_agent.end_run()
         print("Training done")

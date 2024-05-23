@@ -263,10 +263,10 @@ class MLFlowClientModelAgent(MLFlowClient):
         run_data = cls.mlflow_client.get_run(run_id)
 
         details = {
-            "parameters": run_data.data.params,
-            "metrics": run_data.data.metrics,
-            "training_data_info": cls.get_training_data_info(run_id),
-            "architecture": run_data.data.tags.get("architecture", "No architecture info"),
+            "parameters": run_data.data.params or "Not tracked",
+            "metrics": run_data.data.metrics or "Not tracked",
+            "training_data_info": cls.get_training_data_info(run_id) or "Not tracked",
+            "architecture": run_data.data.tags.get("architecture", "Not tracked"),
         }
         return details
 

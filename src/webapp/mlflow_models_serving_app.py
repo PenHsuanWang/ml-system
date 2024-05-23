@@ -2,11 +2,13 @@ import threading
 import shap
 import numpy as np
 import pandas as pd
+import torch
 from fastapi import HTTPException
 from mlflow.exceptions import MlflowException
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import partial_dependence
 from src.model_ops_manager.mlflow_agent.model_downloader import MLFlowClientModelLoader
+
 
 class MLFlowModelsService:
     _instance = None
@@ -15,9 +17,7 @@ class MLFlowModelsService:
     def __new__(cls):
         """
         Create a new instance of the class or return the existing singleton instance.
-
         This method is thread-safe.
-
         :return: The singleton instance of the class.
         :rtype: MLFlowModelsService
         """
@@ -30,7 +30,6 @@ class MLFlowModelsService:
     def __init__(self):
         """
         Initialize the instance.
-
         This method initializes the MLFlow client if the instance has not been initialized.
         """
         if not self._initialized:
@@ -41,9 +40,7 @@ class MLFlowModelsService:
     def list_models(self):
         """
         List all registered models.
-
         This method uses the MLFlow client to fetch a list of all registered models from the MLFlow server.
-
         :return: A list of all registered models.
         :rtype: list
         :raises HTTPException: If an error occurs while fetching the list of models.
@@ -58,10 +55,8 @@ class MLFlowModelsService:
     def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int):
         """
         Compare two models based on their names and versions.
-
         This method fetches the details of two models from the MLFlow server using their names and versions.
         It then compares the parameters, metrics, and architecture of the two models.
-
         :param model_name1: The name of the first model.
         :type model_name1: str
         :param version1: The version of the first model.
@@ -90,10 +85,8 @@ class MLFlowModelsService:
     def compare_dicts(dict1, dict2):
         """
         Compare two dictionaries.
-
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
         For each key, the new dictionary contains a sub-dictionary with the values from the first and second dictionary.
-
         :param dict1: The first dictionary.
         :type dict1: dict
         :param dict2: The second dictionary.
@@ -116,9 +109,7 @@ class MLFlowModelsService:
     def compare_values(val1, val2):
         """
         Compare two values.
-
         This method compares two values and returns a string if they are the same or a dictionary if they are different.
-
         :param val1: The first value.
         :param val2: The second value.
         :return: A string if the values are the same, or a dictionary with the values if they are different.
@@ -131,11 +122,9 @@ class MLFlowModelsService:
     def explain_model(self, model_name: str, version: int, X):
         """
         Generate explanations for a model.
-
         This method retrieves the specified model from MLFlow using the custom methods,
         generates SHAP values, feature importances, or partial dependence plots for the model,
         and returns these explanations.
-
         :param model_name: The name of the model.
         :type model_name: str
         :param version: The version of the model.
@@ -155,24 +144,32 @@ class MLFlowModelsService:
         if not isinstance(X, (pd.DataFrame, np.ndarray)):
             raise ValueError("X should be a pandas DataFrame or numpy ndarray")
 
+        # Convert input data to the appropriate format for SHAP
+        X_values = X.values if isinstance(X, pd.DataFrame) else X
+
         # Calculate SHAP values
         try:
             if isinstance(model, RandomForestRegressor):
                 explainer = shap.TreeExplainer(model)
+            elif isinstance(model, torch.nn.Module):  # Assuming model is a PyTorch neural network
+                model.eval()  # Ensure the model is in evaluation mode
+                explainer = shap.DeepExplainer(model, torch.from_numpy(X_values).float())
             else:
                 explainer = shap.KernelExplainer(model.predict, X)
-            shap_values = explainer.shap_values(X)
+            shap_values = explainer.shap_values(torch.from_numpy(X_values).float())
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to compute SHAP values: {str(e)}")
 
         # Get feature importances
         importances = getattr(model, "feature_importances_", None)
 
-        # Generate partial dependence plots
-        try:
-            pdp_results = partial_dependence(model, X, np.arange(X.shape[1]))
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to compute partial dependence plots: {str(e)}")
+        # Generate partial dependence plots (only applicable for tree-based models)
+        pdp_results = None
+        if isinstance(model, RandomForestRegressor):
+            try:
+                pdp_results = partial_dependence(model, X, np.arange(X.shape[1]))
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to compute partial dependence plots: {str(e)}")
 
         return {
             'shap_values': shap_values,
@@ -180,12 +177,11 @@ class MLFlowModelsService:
             'pdp': pdp_results
         }
 
+
 def get_mlflow_models_service():
     """
     Get the singleton instance of the MLFlowModelsService class.
-
     This function returns the singleton instance of the MLFlowModelsService class.
-
     :return: The singleton instance of the MLFlowModelsService class.
     :rtype: MLFlowModelsService
     """
