@@ -10,6 +10,20 @@ from mlflow.exceptions import MlflowException
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import partial_dependence
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
+from pydantic import BaseModel
+from typing import Dict, Union
+
+
+class ComparisonDetail(BaseModel):
+    model1: Union[str, float, None]
+    model2: Union[str, float, None]
+
+
+class ComparisonResult(BaseModel):
+    parameters: Dict[str, ComparisonDetail]
+    metrics: Dict[str, ComparisonDetail]
+    training_data_info: Dict[str, ComparisonDetail]
+    architecture: ComparisonDetail
 
 
 class MLFlowModelsService:
@@ -86,17 +100,16 @@ class MLFlowModelsService:
             details1 = self._mlflow_agent.get_model_details(model_name1, version1)
             details2 = self._mlflow_agent.get_model_details(model_name2, version2)
             return {
-                "comparison": {
-                    "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
-                    "metrics": self.compare_dicts(details1["metrics"], details2["metrics"]),
-                    "architecture": self.compare_values(details1["architecture"], details2["architecture"])
-                }
+                "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
+                "metrics": self.compare_dicts(details1["metrics"], details2["metrics"]),
+                "training_data_info": self.compare_dicts(details1.get("training_data_info", {}), details2.get("training_data_info", {})),
+                "architecture": self.compare_values(details1["architecture"], details2["architecture"])
             }
         except MlflowException as e:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
 
     @staticmethod
-    def compare_dicts(dict1: dict, dict2: dict) -> dict:
+    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[str, ComparisonDetail]:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
@@ -108,30 +121,22 @@ class MLFlowModelsService:
         :return: A dictionary containing the comparison of the two dictionaries.
         :rtype: dict
         """
-        if not all(isinstance(d, dict) for d in [dict1, dict2]):
-            raise ValueError("Both inputs must be dictionaries.")
-        keys = set(dict1.keys()).union(dict2.keys())
-        result = {}
-        for key in keys:
-            result[key] = {
-                "model1": dict1.get(key, "Not available"),
-                "model2": dict2.get(key, "Not available")
-            }
-        return result
+        comparison = {}
+        for key in set(dict1.keys()).union(dict2.keys()):
+            comparison[key] = ComparisonDetail(model1=dict1.get(key, ""), model2=dict2.get(key, ""))
+        return comparison
 
     @staticmethod
-    def compare_values(val1, val2: typing.Union[str, int, float]) -> typing.Union[str, dict]:
+    def compare_values(value1: str, value2: str) -> ComparisonDetail:
         """
         Compare two values.
         This method compares two values and returns a string if they are the same or a dictionary if they are different.
-        :param val1: The first value.
-        :param val2: The second value.
-        :return: A string if the values are the same, or a dictionary with the values if they are different.
-        :rtype: str or dict
+        :param value1: The first value.
+        :param value2: The second value.
+        :return: A ComparisonDetail object with the values for model1 and model2.
+        :rtype: ComparisonDetail
         """
-        if not isinstance(val1, (str, int, float)) or not isinstance(val2, (str, int, float)):
-            raise ValueError("Both values must be of type str, int, or float.")
-        return "Same" if val1 == val2 else {"model1": val1, "model2": val2}
+        return ComparisonDetail(model1=value1, model2=value2)
 
     def explain_model(self, model_name: str, version: int, X: typing.Union[pd.DataFrame, np.ndarray]) -> dict:
         """
@@ -170,7 +175,7 @@ class MLFlowModelsService:
                 explainer = shap.DeepExplainer(model, torch.from_numpy(X_values).float())
             else:
                 explainer = shap.KernelExplainer(model.predict, X)
-            shap_values = explainer.shap_values(torch.from_numpy(X_values).float())
+            shap_values = explainer.shap_values(X_values)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to compute SHAP values: {str(e)}")
 
