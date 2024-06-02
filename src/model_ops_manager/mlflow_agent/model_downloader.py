@@ -2,7 +2,6 @@
 import mlflow
 import mlflow.pytorch
 import mlflow.sklearn
-import mlflow.tensorflow
 import mlflow.xgboost
 
 
@@ -12,12 +11,13 @@ from src.model_ops_manager.mlflow_agent.client import MLFlowClientModelAgent
 MLFLOW_MODEL_FLAVORS = {
     'mlflow.pytorch': mlflow.pytorch,
     'mlflow.sklearn': mlflow.sklearn,
-    'mlflow.tensorflow': mlflow.tensorflow,
     'mlflow.xgboost': mlflow.xgboost
 }
 
+_mlflow_client_agent = MLFlowClientModelAgent()
 
-class MLFlowClientModelLoader(MLFlowClientModelAgent):
+
+class ModelDownloader:
 
     @classmethod
     def _adhoc_input_to_model_download_source_uri(cls, *args, **kwargs) -> str:
@@ -54,18 +54,18 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
                     model_uri = args[0]
                     return model_uri
                 else:
-                    model_uri = cls.get_model_download_source_uri(args[0])
+                    model_uri = _mlflow_client_agent.get_model_download_source_uri(args[0])
                     return model_uri
             if len(args) == 2:
                 # model_name and model_version or model_stage provided
                 model_name = args[0]
                 if isinstance(args[1], int):
                     model_version = args[1]
-                    model_uri = cls.get_model_download_source_uri(model_name, model_version)
+                    model_uri = _mlflow_client_agent.get_model_download_source_uri(model_name, model_version)
                     return model_uri
                 if isinstance(args[1], str):
                     model_stage = args[1]
-                    model_uri = cls.get_model_download_source_uri(model_name, model_stage=model_stage)
+                    model_uri = _mlflow_client_agent.get_model_download_source_uri(model_name, model_stage=model_stage)
                     return model_uri
             if len(args) == 3:
                 # model_name, model_version and model_stage provided
@@ -75,7 +75,7 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
                     model_version, model_stage = arg2, arg3
                 else:
                     model_stage, model_version = arg2, arg3
-                model_uri = cls.get_model_download_source_uri(model_name, model_version, model_stage)
+                model_uri = _mlflow_client_agent.get_model_download_source_uri(model_name, model_version, model_stage)
                 return model_uri
 
     @classmethod
@@ -97,7 +97,6 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
         model_uri = cls._adhoc_input_to_model_download_source_uri(*args, **kwargs)
         model = mlflow.pyfunc.load_model(model_uri)
         return model
-
 
     @classmethod
     def load_original_model(cls, *args, **kwargs):
@@ -121,18 +120,17 @@ class MLFlowClientModelLoader(MLFlowClientModelAgent):
             return original_model
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    mlflow.set_tracking_uri("http://localhost:5011")
-    model_downloader = MLFlowClientModelLoader
-    model_downloader.init_mlflow_client()
-    model_uri = model_downloader.get_model_download_source_uri("Pytorch_Model", model_stage="Staging")
-    # print(model_uri)
-    # model = model_downloader.load_pyfunc_model("Pytorch_Model")
+    # mlflow.set_tracking_uri("http://localhost:5011")
+    # model_downloader = MLFlowClientModelLoader
+    # model_downloader.init_mlflow_client()
+    # model_uri = model_downloader.get_model_download_source_uri("Pytorch_Model", model_stage="Staging")
+    # # print(model_uri)
+    # # model = model_downloader.load_pyfunc_model("Pytorch_Model")
+    # # print(model)
+    # model = model_downloader.load_original_model(model_uri)
+    #
+    # print(type(model))
     # print(model)
-    model = model_downloader.load_original_model(model_uri)
-
-    print(type(model))
-    print(model)
-
 

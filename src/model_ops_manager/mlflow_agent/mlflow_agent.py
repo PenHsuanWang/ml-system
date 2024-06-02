@@ -2,15 +2,15 @@ from src.model_ops_manager.mlflow_agent.singleton_meta import SingletonMeta
 from src.model_ops_manager.mlflow_agent.tracking import MLFlowTracking
 from src.model_ops_manager.mlflow_agent.configuration import MLFlowConfiguration
 from src.model_ops_manager.mlflow_agent.registration import MLFlowModelRegistry
-from src.model_ops_manager.mlflow_agent.client import MLFlowClient
-from src.model_ops_manager.mlflow_agent.model_downloader import MLFlowClientModelLoader
+from src.model_ops_manager.mlflow_agent.client import MLFlowClientModelAgent
+from src.model_ops_manager.mlflow_agent.model_downloader import ModelDownloader
 
 
 class NullMLFlowAgent(
     MLFlowTracking,
     MLFlowConfiguration,
     MLFlowModelRegistry,
-    MLFlowClientModelLoader,
+    ModelDownloader,
     metaclass=SingletonMeta
 ):
     """
@@ -98,7 +98,8 @@ class MLFlowAgent(
     MLFlowTracking,
     MLFlowConfiguration,
     MLFlowModelRegistry,
-    MLFlowClientModelLoader,
+    ModelDownloader,
+    MLFlowClientModelAgent,
     metaclass=SingletonMeta
 ):
     """
@@ -109,5 +110,4 @@ class MLFlowAgent(
     MLFlowModelRegistry: registering the model
     """
     pass
-
 

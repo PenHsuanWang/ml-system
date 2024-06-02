@@ -1,7 +1,8 @@
 import os
 import mlflow
 
-from src.model_ops_manager.mlflow_agent.model_downloader import MLFlowClientModelLoader
+from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
+# from src.model_ops_manager.mlflow_agent.model_downloader import MLFlowClientModelLoader
 
 
 class MLFlowModelDownloadServingApp:
@@ -11,7 +12,9 @@ class MLFlowModelDownloadServingApp:
     """
 
     # singleton instance of MLFlowClientModelLoader
-    _mlflow_model_downloader = MLFlowClientModelLoader
+    # _mlflow_model_downloader = MLFlowClientModelLoader
+
+    _mlflow_agent = MLFlowAgent()
 
     def __init__(self):
         """
@@ -27,8 +30,9 @@ class MLFlowModelDownloadServingApp:
         :param tracking_uri: the mlflow tracking uri
         :return:
         """
-        mlflow.set_tracking_uri(tracking_uri)
-
+        # mlflow.set_tracking_uri(tracking_uri)
+        print("Setting mlflow tracking via mlflow_agent")
+        cls._mlflow_agent.set_tracking_uri(tracking_uri)
 
     @classmethod
     def init_mlflow_downloader_client(cls) -> None:
@@ -37,7 +41,7 @@ class MLFlowModelDownloadServingApp:
         :return:
         """
         try:
-            cls._mlflow_model_downloader.init_mlflow_client()
+            cls._mlflow_agent.init_mlflow_client()
         except ValueError:
             print("mlflow tracking uri is not set, please set the tracking uri first by api ")
 
@@ -50,8 +54,8 @@ class MLFlowModelDownloadServingApp:
         :param model_stage: the stage of the model
         :return:
         """
-        model_uri = cls._mlflow_model_downloader.get_model_download_source_uri(model_name, model_version, model_stage)
-        model = cls._mlflow_model_downloader.load_pyfunc_model(model_uri)
+        model_uri = cls._mlflow_agent.get_model_download_source_uri(model_name, model_version, model_stage)
+        model = cls._mlflow_agent.load_pyfunc_model(model_uri)
         return model
 
     @classmethod
@@ -63,8 +67,8 @@ class MLFlowModelDownloadServingApp:
         :param model_stage: the stage of the model
         :return:
         """
-        model_uri = cls._mlflow_model_downloader.get_model_download_source_uri(model_name, model_version, model_stage)
-        model = cls._mlflow_model_downloader.load_original_model(model_uri)
+        model_uri = cls._mlflow_agent.get_model_download_source_uri(model_name, model_version, model_stage)
+        model = cls._mlflow_agent.load_original_model(model_uri)
         return model
 
     @classmethod
