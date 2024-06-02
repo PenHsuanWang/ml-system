@@ -100,10 +100,10 @@ class MLFlowModelsService:
             details1 = self._mlflow_agent.get_model_details(model_name1, version1)
             details2 = self._mlflow_agent.get_model_details(model_name2, version2)
             return {
-                "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
-                "metrics": self.compare_dicts(details1["metrics"], details2["metrics"]),
+                "parameters": self.compare_dicts(details1.get("parameters", {}), details2.get("parameters", {})),
+                "metrics": self.compare_dicts(details1.get("metrics", {}), details2.get("metrics", {})),
                 "training_data_info": self.compare_dicts(details1.get("training_data_info", {}), details2.get("training_data_info", {})),
-                "architecture": self.compare_values(details1["architecture"], details2["architecture"])
+                "architecture": self.compare_values(details1.get("architecture", ""), details2.get("architecture", ""))
             }
         except MlflowException as e:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
@@ -123,7 +123,7 @@ class MLFlowModelsService:
         """
         comparison = {}
         for key in set(dict1.keys()).union(dict2.keys()):
-            comparison[key] = ComparisonDetail(model1=dict1.get(key, ""), model2=dict2.get(key, ""))
+            comparison[key] = ComparisonDetail(model1=dict1.get(key, None), model2=dict2.get(key, None))
         return comparison
 
     @staticmethod
