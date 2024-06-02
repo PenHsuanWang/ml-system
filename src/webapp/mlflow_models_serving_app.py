@@ -1,4 +1,6 @@
 import threading
+import typing
+
 import shap
 import numpy as np
 import pandas as pd
@@ -7,14 +9,16 @@ from fastapi import HTTPException
 from mlflow.exceptions import MlflowException
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import partial_dependence
-# from src.model_ops_manager.mlflow_agent.client import MLFlowClientModelAgent
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
 
 
 class MLFlowModelsService:
+    """
+    The MLFlowModelsService is a singleton class to manage models and perform model inference.
+    """
+
     _app = None
     _app_lock = threading.Lock()
-
     _mlflow_agent = MLFlowAgent()
 
     def __new__(cls):
@@ -46,7 +50,7 @@ class MLFlowModelsService:
         cls._mlflow_agent.set_tracking_uri(mlflow_tracking_server)
         cls._mlflow_agent.init_mlflow_client()
 
-    def list_models(self):
+    def list_models(self) -> list:
         """
         List all registered models.
         This method uses the MLFlow client to fetch a list of all registered models from the MLFlow server.
@@ -61,7 +65,7 @@ class MLFlowModelsService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int):
+    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> dict:
         """
         Compare two models based on their names and versions.
         This method fetches the details of two models from the MLFlow server using their names and versions.
@@ -92,7 +96,7 @@ class MLFlowModelsService:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
 
     @staticmethod
-    def compare_dicts(dict1, dict2):
+    def compare_dicts(dict1: dict, dict2: dict) -> dict:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
@@ -116,7 +120,7 @@ class MLFlowModelsService:
         return result
 
     @staticmethod
-    def compare_values(val1, val2):
+    def compare_values(val1, val2: typing.Union[str, int, float]) -> typing.Union[str, dict]:
         """
         Compare two values.
         This method compares two values and returns a string if they are the same or a dictionary if they are different.
@@ -129,7 +133,7 @@ class MLFlowModelsService:
             raise ValueError("Both values must be of type str, int, or float.")
         return "Same" if val1 == val2 else {"model1": val1, "model2": val2}
 
-    def explain_model(self, model_name: str, version: int, X):
+    def explain_model(self, model_name: str, version: int, X: typing.Union[pd.DataFrame, np.ndarray]) -> dict:
         """
         Generate explanations for a model.
         This method retrieves the specified model from MLFlow using the custom methods,
@@ -188,7 +192,7 @@ class MLFlowModelsService:
         }
 
 
-def get_mlflow_models_service():
+def get_mlflow_models_service() -> MLFlowModelsService:
     """
     Get the singleton instance of the MLFlowModelsService class.
     This function returns the singleton instance of the MLFlowModelsService class.
