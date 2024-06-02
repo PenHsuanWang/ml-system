@@ -1,29 +1,42 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from src.webapp.mlflow_models_serving_app import get_mlflow_models_service, MLFlowModelsService
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel
 
 router = APIRouter()
 
 
+class ModelVersionDetail(BaseModel):
+    """
+    A Pydantic model representing details of a specific version of an MLFlow model.
+
+    Attributes:
+        version (str): The version number of the model.
+        stage (str): The stage of the model (e.g., Production, Staging, Archived).
+        description (Optional[str]): A description of the model version, providing additional context about its purpose or changes.
+    """
+    version: str
+    stage: str
+    description: Optional[str]
+
+
 class MLFlowModelDetail(BaseModel):
     """
-    A Pydantic model for detailed information about an MLFlow model.
+    A Pydantic model representing a registered MLFlow model with details on its various versions.
 
-    :ivar name: The name of the model.
-    :vartype name: str
-    :ivar version: The versions of the model.
-    :vartype version: List[str]
-    :ivar stage: The stages of the model.
-    :vartype stage: List[str]
-    :ivar description: The descriptions of the model.
-    :vartype description: List[str]
+    This model is used to aggregate information about different versions of a model registered in MLFlow,
+    including their stages and descriptions. It is primarily used in API responses where a comprehensive overview
+    of a model and its versions is required.
+
+    Attributes:
+        name (str): The name of the registered model.
+        latest_versions (List[ModelVersionDetail]): A list of `ModelVersionDetail` instances,
+            each representing a version of the model with its respective stage and optional description.
     """
     name: str
-    version: List[str]
-    stage: List[str]
-    description: List[str]
+    latest_versions: List[ModelVersionDetail]
+
 
 
 @router.get("/mlflow/models", response_model=List[MLFlowModelDetail], responses={200: {"description": "List of all MLFlow models"}})
@@ -35,11 +48,20 @@ def get_mlflow_models(service: MLFlowModelsService = Depends(get_mlflow_models_s
     :param service: The MLFlowModelsService instance.
     :type service: MLFlowModelsService
     :return: A list of all registered models.
-    :rtype: list
-    :raises HTTPException: If an error occurs while fetching the list of models.
+    :rtype: List[MLFlowModelDetail]
+    :raises HTTPExpression: If an error occurs while fetching the list of models.
     """
     try:
-        models = service.list_models()
+        raw_models = service.list_models()
+        models = [
+            MLFlowModelDetail(
+                name=model['name'],
+                latest_versions=[
+                    ModelVersionDetail(version=ver['version'], stage=ver['stage'], description=ver.get('description'))
+                    for ver in model['latest_versions']
+                ]
+            ) for model in raw_models
+        ]
         return models
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"message": e.detail})

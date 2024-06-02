@@ -228,7 +228,8 @@ class MLFlowClientModelAgent(MLFlowClient):
         """
         cls.init_mlflow_client()  # Ensure the MLflow client is initialized
         try:
-            registered_models = cls.mlflow_client.list_registered_models()
+            registered_models = cls.mlflow_client.search_registered_models()
+
             models = [{
                 "name": model.name,
                 "latest_versions": [{
@@ -241,6 +242,8 @@ class MLFlowClientModelAgent(MLFlowClient):
         except MlflowException as e:
             print(f"Error fetching registered models: {e}")
             raise
+        except Exception as ee:
+            ee.with_traceback()
 
     @classmethod
     def get_training_data_info(cls, run_id: str) -> dict:
@@ -281,3 +284,5 @@ if __name__ == "__main__":
     print(model_uri)
 
     print(mlflow_client.get_model_latest_version("Pytorch_Model", "Production"))
+
+    print(mlflow_client.list_all_registered_models())
