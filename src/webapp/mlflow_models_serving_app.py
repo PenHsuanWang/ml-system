@@ -1,4 +1,6 @@
 import threading
+import typing
+
 import shap
 import numpy as np
 import pandas as pd
@@ -7,12 +9,17 @@ from fastapi import HTTPException
 from mlflow.exceptions import MlflowException
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import partial_dependence
-from src.model_ops_manager.mlflow_agent.model_downloader import MLFlowClientModelLoader
+from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
 
 
 class MLFlowModelsService:
-    _instance = None
-    _lock = threading.Lock()
+    """
+    The MLFlowModelsService is a singleton class to manage models and perform model inference.
+    """
+
+    _app = None
+    _app_lock = threading.Lock()
+    _mlflow_agent = MLFlowAgent()
 
     def __new__(cls):
         """
@@ -21,23 +28,29 @@ class MLFlowModelsService:
         :return: The singleton instance of the class.
         :rtype: MLFlowModelsService
         """
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super(MLFlowModelsService, cls).__new__(cls)
-                cls._initialized = False
-        return cls._instance
+        with cls._app_lock:
+            if cls._app is None:
+                cls._app = super(MLFlowModelsService, cls).__new__(cls)
+                cls._app._initialized = False  # Initialize the _initialized variable here
+        return cls._app
 
     def __init__(self):
-        """
-        Initialize the instance.
-        This method initializes the MLFlow client if the instance has not been initialized.
-        """
-        if not self._initialized:
-            self.client = MLFlowClientModelLoader
-            self.client.init_mlflow_client()
-            self._initialized = True
+        pass
 
-    def list_models(self):
+    @classmethod
+    def setup_mlflow_agent(cls, *args, **kwargs) -> None:
+        """
+        Set up the MLFlow agent with the provided tracking server URI.
+        :param mlflow_tracking_server: The MLFlow tracking server URI.
+        """
+        mlflow_tracking_server = kwargs.get("mlflow_tracking_server", None)
+        if mlflow_tracking_server is None:
+            raise ValueError("MLflow tracking server is not provided")
+
+        cls._mlflow_agent.set_tracking_uri(mlflow_tracking_server)
+        cls._mlflow_agent.init_mlflow_client()
+
+    def list_models(self) -> list:
         """
         List all registered models.
         This method uses the MLFlow client to fetch a list of all registered models from the MLFlow server.
@@ -46,13 +59,13 @@ class MLFlowModelsService:
         :raises HTTPException: If an error occurs while fetching the list of models.
         """
         try:
-            return self.client.list_all_registered_models()
+            return self._mlflow_agent.list_all_registered_models()
         except MlflowException as me:
             raise HTTPException(status_code=500, detail=f"Failed to fetch models from MLflow: {str(me)}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int):
+    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> dict:
         """
         Compare two models based on their names and versions.
         This method fetches the details of two models from the MLFlow server using their names and versions.
@@ -67,10 +80,11 @@ class MLFlowModelsService:
         :type version2: int
         :return: A dictionary containing the comparison of parameters, metrics, and architecture of the two models.
         :rtype: dict
+        :raises HTTPException: If an error occurs while comparing the models.
         """
         try:
-            details1 = self.client.get_model_details(model_name1, version1)
-            details2 = self.client.get_model_details(model_name2, version2)
+            details1 = self._mlflow_agent.get_model_details(model_name1, version1)
+            details2 = self._mlflow_agent.get_model_details(model_name2, version2)
             return {
                 "comparison": {
                     "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
@@ -82,7 +96,7 @@ class MLFlowModelsService:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
 
     @staticmethod
-    def compare_dicts(dict1, dict2):
+    def compare_dicts(dict1: dict, dict2: dict) -> dict:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
@@ -106,7 +120,7 @@ class MLFlowModelsService:
         return result
 
     @staticmethod
-    def compare_values(val1, val2):
+    def compare_values(val1, val2: typing.Union[str, int, float]) -> typing.Union[str, dict]:
         """
         Compare two values.
         This method compares two values and returns a string if they are the same or a dictionary if they are different.
@@ -119,7 +133,7 @@ class MLFlowModelsService:
             raise ValueError("Both values must be of type str, int, or float.")
         return "Same" if val1 == val2 else {"model1": val1, "model2": val2}
 
-    def explain_model(self, model_name: str, version: int, X):
+    def explain_model(self, model_name: str, version: int, X: typing.Union[pd.DataFrame, np.ndarray]) -> dict:
         """
         Generate explanations for a model.
         This method retrieves the specified model from MLFlow using the custom methods,
@@ -136,8 +150,8 @@ class MLFlowModelsService:
         :raises HTTPException: If the model cannot be explained.
         """
         try:
-            model_uri = self.client.get_model_download_source_uri(model_name, model_version=version)
-            model = self.client.load_original_model(model_uri)
+            model_uri = self._mlflow_agent.get_model_download_source_uri(model_name, model_version=version)
+            model = self._mlflow_agent.load_original_model(model_uri)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to retrieve model: {str(e)}")
 
@@ -178,7 +192,7 @@ class MLFlowModelsService:
         }
 
 
-def get_mlflow_models_service():
+def get_mlflow_models_service() -> MLFlowModelsService:
     """
     Get the singleton instance of the MLFlowModelsService class.
     This function returns the singleton instance of the MLFlowModelsService class.
