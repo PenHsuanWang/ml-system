@@ -79,7 +79,8 @@ class MLFlowModelsService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> dict:
+    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str,
+                             version2: int) -> ComparisonResult:
         """
         Compare two models based on their names and versions.
         This method fetches the details of two models from the MLFlow server using their names and versions.
@@ -93,23 +94,36 @@ class MLFlowModelsService:
         :param version2: The version of the second model.
         :type version2: int
         :return: A dictionary containing the comparison of parameters, metrics, and architecture of the two models.
-        :rtype: dict
+        :rtype: ComparisonResult
         :raises HTTPException: If an error occurs while comparing the models.
         """
         try:
             details1 = self._mlflow_agent.get_model_details(model_name1, version1)
             details2 = self._mlflow_agent.get_model_details(model_name2, version2)
-            return {
-                "parameters": self.compare_dicts(details1.get("parameters", {}), details2.get("parameters", {})),
-                "metrics": self.compare_dicts(details1.get("metrics", {}), details2.get("metrics", {})),
-                "training_data_info": self.compare_dicts(details1.get("training_data_info", {}), details2.get("training_data_info", {})),
-                "architecture": self.compare_values(details1.get("architecture", ""), details2.get("architecture", ""))
-            }
+
+            # Detailed logging of details1 and details2
+            print("Debug: Model details for model 1", details1)
+            print("Debug: Model details for model 2", details2)
+
+            comparison_result = ComparisonResult(
+                parameters=self.compare_dicts(details1.get("parameters", {}), details2.get("parameters", {})),
+                metrics=self.compare_dicts(details1.get("metrics", {}), details2.get("metrics", {})),
+                training_data_info=self.compare_dicts(details1.get("training_data_info", {}),
+                                                      details2.get("training_data_info", {})),
+                architecture=self.compare_values(details1.get("architecture", ""), details2.get("architecture", ""))
+            )
+
+            print("Debug: Comparison Result", comparison_result)
+
+            return comparison_result
         except MlflowException as e:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
-    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[str, ComparisonDetail]:
+    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[
+        str, ComparisonDetail]:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
