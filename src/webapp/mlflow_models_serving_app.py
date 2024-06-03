@@ -105,12 +105,22 @@ class MLFlowModelsService:
             print("Debug: Model details for model 1", details1)
             print("Debug: Model details for model 2", details2)
 
+            # Ensure training_data_info is a dictionary
+            details1["training_data_info"] = self.ensure_dict(details1.get("training_data_info", {}))
+            details2["training_data_info"] = self.ensure_dict(details2.get("training_data_info", {}))
+
+            # Fill missing data with default values
+            filled_details1 = self.fill_missing_data(details1)
+            filled_details2 = self.fill_missing_data(details2)
+
             comparison_result = ComparisonResult(
-                parameters=self.compare_dicts(details1.get("parameters", {}), details2.get("parameters", {})),
-                metrics=self.compare_dicts(details1.get("metrics", {}), details2.get("metrics", {})),
-                training_data_info=self.compare_dicts(details1.get("training_data_info", {}),
-                                                      details2.get("training_data_info", {})),
-                architecture=self.compare_values(details1.get("architecture", ""), details2.get("architecture", ""))
+                parameters=self.compare_dicts(filled_details1.get("parameters", {}),
+                                              filled_details2.get("parameters", {})),
+                metrics=self.compare_dicts(filled_details1.get("metrics", {}), filled_details2.get("metrics", {})),
+                training_data_info=self.compare_dicts(filled_details1.get("training_data_info", {}),
+                                                      filled_details2.get("training_data_info", {})),
+                architecture=self.compare_values(filled_details1.get("architecture", ""),
+                                                 filled_details2.get("architecture", ""))
             )
 
             print("Debug: Comparison Result", comparison_result)
@@ -120,6 +130,41 @@ class MLFlowModelsService:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    def ensure_dict(value) -> dict:
+        """
+        Ensure that the value is a dictionary.
+        If the value is a string, wrap it in a dictionary with a key 'info'.
+        :param value: The value to ensure is a dictionary.
+        :return: A dictionary.
+        """
+        if isinstance(value, dict):
+            return value
+        return {"info": value}
+
+    @staticmethod
+    def fill_missing_data(details: dict) -> dict:
+        """
+        Fill missing data in the details dictionary with default values.
+        :param details: The original details dictionary.
+        :return: The details dictionary with missing data filled.
+        """
+        default_values = {
+            "parameters": {},
+            "metrics": {},
+            "training_data_info": {},
+            "architecture": ""
+        }
+        for key in default_values:
+            if key not in details or details[key] is None:
+                details[key] = default_values[key]
+            elif isinstance(details[key], dict):
+                # Fill missing keys in nested dictionaries
+                for nested_key in default_values[key]:
+                    if nested_key not in details[key]:
+                        details[key][nested_key] = default_values[key][nested_key]
+        return details
 
     @staticmethod
     def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[
