@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from src.webapp.mlflow_models_serving_app import get_mlflow_models_service, MLFlowModelsService
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Union, Any
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -25,8 +25,8 @@ class MLFlowModelDetail(BaseModel):
 
 
 class ComparisonDetail(BaseModel):
-    model1: str
-    model2: str
+    model1: Union[str, float, None]
+    model2: Union[str, float, None]
 
 
 class ComparisonResult(BaseModel):
@@ -108,12 +108,17 @@ def compare_mlflow_models(model_name1: str, version1: int, model_name2: str, ver
     :param service: The MLFlowModelsService instance.
     :type service: MLFlowModelsService
     :return: A dictionary containing the comparison of parameters, metrics, and architecture of the two models.
-    :rtype: dict
+    :rtype: ComparisonResult
     :raises HTTPException: If an error occurs while fetching the comparison of models.
     """
     try:
         comparison_result = service.get_model_comparison(model_name1, version1, model_name2, version2)
-        return comparison_result
+        return ComparisonResult(
+            parameters={k: ComparisonDetail(**v) for k, v in comparison_result["parameters"].items()},
+            metrics={k: ComparisonDetail(**v) for k, v in comparison_result["metrics"].items()},
+            training_data_info={k: ComparisonDetail(**v) for k, v in comparison_result["training_data_info"].items()} if comparison_result.get("training_data_info") else None,
+            architecture=ComparisonDetail(**comparison_result["architecture"])
+        )
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"message": e.detail})
     except Exception as e:

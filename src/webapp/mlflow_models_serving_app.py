@@ -10,21 +10,7 @@ from mlflow.exceptions import MlflowException
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import partial_dependence
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
-from pydantic import BaseModel
-from typing import Dict, Union
-
-
-class ComparisonDetail(BaseModel):
-    model1: Union[str, float, None]
-    model2: Union[str, float, None]
-
-
-class ComparisonResult(BaseModel):
-    parameters: Dict[str, ComparisonDetail]
-    metrics: Dict[str, ComparisonDetail]
-    training_data_info: Dict[str, ComparisonDetail]
-    architecture: ComparisonDetail
-
+from typing import Dict, Union, Optional
 
 class MLFlowModelsService:
     """
@@ -97,7 +83,7 @@ class MLFlowModelsService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> ComparisonResult:
+    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> Dict[str, Union[str, float, None]]:
         """
         Compare two models based on their names and versions.
         This method fetches the details of two models from the MLFlow server using their names and versions.
@@ -118,27 +104,21 @@ class MLFlowModelsService:
             details1 = self._mlflow_agent.get_model_details(model_name1, version1)
             details2 = self._mlflow_agent.get_model_details(model_name2, version2)
 
-            # Detailed logging of details1 and details2
             print("Debug: Model details for model 1", details1)
             print("Debug: Model details for model 2", details2)
 
-            # Ensure training_data_info is a dictionary
             details1["training_data_info"] = self.ensure_dict(details1.get("training_data_info", {}))
             details2["training_data_info"] = self.ensure_dict(details2.get("training_data_info", {}))
 
-            # Fill missing data with default values
             filled_details1 = self.fill_missing_data(details1)
             filled_details2 = self.fill_missing_data(details2)
 
-            comparison_result = ComparisonResult(
-                parameters=self.compare_dicts(filled_details1.get("parameters", {}),
-                                              filled_details2.get("parameters", {})),
-                metrics=self.compare_dicts(filled_details1.get("metrics", {}), filled_details2.get("metrics", {})),
-                training_data_info=self.compare_dicts(filled_details1.get("training_data_info", {}),
-                                                      filled_details2.get("training_data_info", {})),
-                architecture=self.compare_values(filled_details1.get("architecture", ""),
-                                                 filled_details2.get("architecture", ""))
-            )
+            comparison_result = {
+                "parameters": self.compare_dicts(filled_details1.get("parameters", {}), filled_details2.get("parameters", {})),
+                "metrics": self.compare_dicts(filled_details1.get("metrics", {}), filled_details2.get("metrics", {})),
+                "training_data_info": self.compare_dicts(filled_details1.get("training_data_info", {}), filled_details2.get("training_data_info", {})),
+                "architecture": self.compare_values(filled_details1.get("architecture", ""), filled_details2.get("architecture", ""))
+            }
 
             print("Debug: Comparison Result", comparison_result)
 
@@ -184,7 +164,7 @@ class MLFlowModelsService:
         return details
 
     @staticmethod
-    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[str, ComparisonDetail]:
+    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[str, Union[str, float, None]]:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
@@ -198,26 +178,26 @@ class MLFlowModelsService:
         """
         comparison = {}
         for key in set(dict1.keys()).union(dict2.keys()):
-            comparison[key] = ComparisonDetail(
-                model1=dict1.get(key) if dict1.get(key) is not None else '',
-                model2=dict2.get(key) if dict2.get(key) is not None else ''
-            )
+            comparison[key] = {
+                "model1": dict1.get(key) if dict1.get(key) is not None else '',
+                "model2": dict2.get(key) if dict2.get(key) is not None else ''
+            }
         return comparison
 
     @staticmethod
-    def compare_values(value1: str, value2: str) -> ComparisonDetail:
+    def compare_values(value1: str, value2: str) -> Dict[str, Union[str, float, None]]:
         """
         Compare two values.
         This method compares two values and returns a string if they are the same or a dictionary if they are different.
         :param value1: The first value.
         :param value2: The second value.
         :return: A ComparisonDetail object with the values for model1 and model2.
-        :rtype: ComparisonDetail
+        :rtype: dict
         """
-        return ComparisonDetail(
-            model1=value1 if value1 is not None else '',
-            model2=value2 if value2 is not None else ''
-        )
+        return {
+            "model1": value1 if value1 is not None else '',
+            "model2": value2 if value2 is not None else ''
+        }
 
     def explain_model(self, model_name: str, version: int, X: typing.Union[pd.DataFrame, np.ndarray]) -> dict:
         """
