@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from src.webapp.mlflow_models_serving_app import get_mlflow_models_service, MLFlowModelsService
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -11,6 +11,12 @@ class ModelVersionDetail(BaseModel):
     version: str
     stage: str
     description: Optional[str]
+
+
+class ModelDetail(BaseModel):
+    name: str
+    version: int
+    details: Dict[str, Any]
 
 
 class MLFlowModelDetail(BaseModel):
@@ -54,6 +60,31 @@ def get_mlflow_models(service: MLFlowModelsService = Depends(get_mlflow_models_s
             ) for model in raw_models
         ]
         return models
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": "Internal server error", "error": str(e)})
+
+
+@router.get("/mlflow/models/details/{model_name}/{version}", response_model=ModelDetail)
+def get_mlflow_model_details(model_name: str, version: int, service: MLFlowModelsService = Depends(get_mlflow_models_service)):
+    """
+    Endpoint to get the details of a specific MLFlow model version.
+    Returns detailed information about the model including parameters, metrics, and other metadata.
+
+    :param model_name: The name of the model.
+    :type model_name: str
+    :param version: The version of the model.
+    :type version: int
+    :param service: The MLFlowModelsService instance.
+    :type service: MLFlowModelsService
+    :return: The details of the model version.
+    :rtype: dict
+    :raises HTTPException: If an error occurs while fetching the model details.
+    """
+    try:
+        model_details = service.get_model_details(model_name, version)
+        return ModelDetail(name=model_name, version=version, details=model_details)
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"message": e.detail})
     except Exception as e:

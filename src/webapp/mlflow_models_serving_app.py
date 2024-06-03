@@ -79,8 +79,25 @@ class MLFlowModelsService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str,
-                             version2: int) -> ComparisonResult:
+    def get_model_details(self, model_name: str, version: int) -> dict:
+        """
+        Get the details of a specific model version.
+        :param model_name: The name of the model.
+        :type model_name: str
+        :param version: The version of the model.
+        :type version: int
+        :return: The details of the model version.
+        :rtype: dict
+        :raises HTTPException: If an error occurs while fetching the model details.
+        """
+        try:
+            return self._mlflow_agent.get_model_details(model_name, version)
+        except MlflowException as e:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch model details: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> ComparisonResult:
         """
         Compare two models based on their names and versions.
         This method fetches the details of two models from the MLFlow server using their names and versions.
@@ -167,8 +184,7 @@ class MLFlowModelsService:
         return details
 
     @staticmethod
-    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[
-        str, ComparisonDetail]:
+    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[str, ComparisonDetail]:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
@@ -182,7 +198,10 @@ class MLFlowModelsService:
         """
         comparison = {}
         for key in set(dict1.keys()).union(dict2.keys()):
-            comparison[key] = ComparisonDetail(model1=dict1.get(key, None), model2=dict2.get(key, None))
+            comparison[key] = ComparisonDetail(
+                model1=dict1.get(key) if dict1.get(key) is not None else '',
+                model2=dict2.get(key) if dict2.get(key) is not None else ''
+            )
         return comparison
 
     @staticmethod
@@ -195,7 +214,10 @@ class MLFlowModelsService:
         :return: A ComparisonDetail object with the values for model1 and model2.
         :rtype: ComparisonDetail
         """
-        return ComparisonDetail(model1=value1, model2=value2)
+        return ComparisonDetail(
+            model1=value1 if value1 is not None else '',
+            model2=value2 if value2 is not None else ''
+        )
 
     def explain_model(self, model_name: str, version: int, X: typing.Union[pd.DataFrame, np.ndarray]) -> dict:
         """
