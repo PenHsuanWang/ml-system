@@ -10,7 +10,7 @@ from mlflow.exceptions import MlflowException
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import partial_dependence
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent
-
+from typing import Dict, Union, Optional
 
 class MLFlowModelsService:
     """
@@ -65,7 +65,25 @@ class MLFlowModelsService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> dict:
+    def get_model_details(self, model_name: str, version: int) -> dict:
+        """
+        Get the details of a specific model version.
+        :param model_name: The name of the model.
+        :type model_name: str
+        :param version: The version of the model.
+        :type version: int
+        :return: The details of the model version.
+        :rtype: dict
+        :raises HTTPException: If an error occurs while fetching the model details.
+        """
+        try:
+            return self._mlflow_agent.get_model_details(model_name, version)
+        except MlflowException as e:
+            raise HTTPException(status_code=500, detail=f"Failed to fetch model details: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def get_model_comparison(self, model_name1: str, version1: int, model_name2: str, version2: int) -> Dict[str, Union[str, float, None]]:
         """
         Compare two models based on their names and versions.
         This method fetches the details of two models from the MLFlow server using their names and versions.
@@ -79,24 +97,74 @@ class MLFlowModelsService:
         :param version2: The version of the second model.
         :type version2: int
         :return: A dictionary containing the comparison of parameters, metrics, and architecture of the two models.
-        :rtype: dict
+        :rtype: ComparisonResult
         :raises HTTPException: If an error occurs while comparing the models.
         """
         try:
             details1 = self._mlflow_agent.get_model_details(model_name1, version1)
             details2 = self._mlflow_agent.get_model_details(model_name2, version2)
-            return {
-                "comparison": {
-                    "parameters": self.compare_dicts(details1["parameters"], details2["parameters"]),
-                    "metrics": self.compare_dicts(details1["metrics"], details2["metrics"]),
-                    "architecture": self.compare_values(details1["architecture"], details2["architecture"])
-                }
+
+            print("Debug: Model details for model 1", details1)
+            print("Debug: Model details for model 2", details2)
+
+            details1["training_data_info"] = self.ensure_dict(details1.get("training_data_info", {}))
+            details2["training_data_info"] = self.ensure_dict(details2.get("training_data_info", {}))
+
+            filled_details1 = self.fill_missing_data(details1)
+            filled_details2 = self.fill_missing_data(details2)
+
+            comparison_result = {
+                "parameters": self.compare_dicts(filled_details1.get("parameters", {}), filled_details2.get("parameters", {})),
+                "metrics": self.compare_dicts(filled_details1.get("metrics", {}), filled_details2.get("metrics", {})),
+                "training_data_info": self.compare_dicts(filled_details1.get("training_data_info", {}), filled_details2.get("training_data_info", {})),
+                "architecture": self.compare_values(filled_details1.get("architecture", ""), filled_details2.get("architecture", ""))
             }
+
+            print("Debug: Comparison Result", comparison_result)
+
+            return comparison_result
         except MlflowException as e:
             raise HTTPException(status_code=500, detail=f"Failed to compare models: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
-    def compare_dicts(dict1: dict, dict2: dict) -> dict:
+    def ensure_dict(value) -> dict:
+        """
+        Ensure that the value is a dictionary.
+        If the value is a string, wrap it in a dictionary with a key 'info'.
+        :param value: The value to ensure is a dictionary.
+        :return: A dictionary.
+        """
+        if isinstance(value, dict):
+            return value
+        return {"info": value}
+
+    @staticmethod
+    def fill_missing_data(details: dict) -> dict:
+        """
+        Fill missing data in the details dictionary with default values.
+        :param details: The original details dictionary.
+        :return: The details dictionary with missing data filled.
+        """
+        default_values = {
+            "parameters": {},
+            "metrics": {},
+            "training_data_info": {},
+            "architecture": ""
+        }
+        for key in default_values:
+            if key not in details or details[key] is None:
+                details[key] = default_values[key]
+            elif isinstance(details[key], dict):
+                # Fill missing keys in nested dictionaries
+                for nested_key in default_values[key]:
+                    if nested_key not in details[key]:
+                        details[key][nested_key] = default_values[key][nested_key]
+        return details
+
+    @staticmethod
+    def compare_dicts(dict1: Dict[str, Union[str, float]], dict2: Dict[str, Union[str, float]]) -> Dict[str, Union[str, float, None]]:
         """
         Compare two dictionaries.
         This method compares two dictionaries and returns a new dictionary with the keys from both dictionaries.
@@ -108,30 +176,28 @@ class MLFlowModelsService:
         :return: A dictionary containing the comparison of the two dictionaries.
         :rtype: dict
         """
-        if not all(isinstance(d, dict) for d in [dict1, dict2]):
-            raise ValueError("Both inputs must be dictionaries.")
-        keys = set(dict1.keys()).union(dict2.keys())
-        result = {}
-        for key in keys:
-            result[key] = {
-                "model1": dict1.get(key, "Not available"),
-                "model2": dict2.get(key, "Not available")
+        comparison = {}
+        for key in set(dict1.keys()).union(dict2.keys()):
+            comparison[key] = {
+                "model1": dict1.get(key) if dict1.get(key) is not None else '',
+                "model2": dict2.get(key) if dict2.get(key) is not None else ''
             }
-        return result
+        return comparison
 
     @staticmethod
-    def compare_values(val1, val2: typing.Union[str, int, float]) -> typing.Union[str, dict]:
+    def compare_values(value1: str, value2: str) -> Dict[str, Union[str, float, None]]:
         """
         Compare two values.
         This method compares two values and returns a string if they are the same or a dictionary if they are different.
-        :param val1: The first value.
-        :param val2: The second value.
-        :return: A string if the values are the same, or a dictionary with the values if they are different.
-        :rtype: str or dict
+        :param value1: The first value.
+        :param value2: The second value.
+        :return: A ComparisonDetail object with the values for model1 and model2.
+        :rtype: dict
         """
-        if not isinstance(val1, (str, int, float)) or not isinstance(val2, (str, int, float)):
-            raise ValueError("Both values must be of type str, int, or float.")
-        return "Same" if val1 == val2 else {"model1": val1, "model2": val2}
+        return {
+            "model1": value1 if value1 is not None else '',
+            "model2": value2 if value2 is not None else ''
+        }
 
     def explain_model(self, model_name: str, version: int, X: typing.Union[pd.DataFrame, np.ndarray]) -> dict:
         """
@@ -170,7 +236,7 @@ class MLFlowModelsService:
                 explainer = shap.DeepExplainer(model, torch.from_numpy(X_values).float())
             else:
                 explainer = shap.KernelExplainer(model.predict, X)
-            shap_values = explainer.shap_values(torch.from_numpy(X_values).float())
+            shap_values = explainer.shap_values(X_values)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to compute SHAP values: {str(e)}")
 

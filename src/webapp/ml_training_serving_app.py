@@ -45,7 +45,6 @@ class MLTrainingServingApp:
         """
         pass
 
-
     @classmethod
     def set_data_fetcher(cls, data_fetcher_name: str) -> bool:
         """
@@ -210,6 +209,48 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
+    def set_mlflow_model_name(cls, model_name: str) -> bool:
+        """
+        Design for an exposed REST api to let client set the mlflow model name
+        :param model_name: The model name to be used in MLflow tracking
+        :return: True if model name is successfully set
+        """
+        if cls._trainer is None:
+            print("Trainer is not initialized")
+            return False
+
+        cls._trainer.set_mlflow_model_name(model_name)
+        return True
+
+    @classmethod
+    def set_mlflow_experiment_name(cls, experiment_name: str) -> bool:
+        """
+        Design for an exposed REST api to let client set the mlflow experiment name
+        :param experiment_name: The experiment name to be used in MLflow tracking
+        :return: True if experiment name is successfully set
+        """
+        if cls._trainer is None:
+            print("Trainer is not initialized")
+            return False
+
+        cls._trainer.set_mlflow_experiment_name(experiment_name)
+        return True
+
+    @classmethod
+    def set_mlflow_run_name(cls, run_name: str) -> bool:
+        """
+        Design for an exposed REST api to let client set the mlflow run name
+        :param run_name: The run name to be used in MLflow tracking
+        :return: True if run name is successfully set
+        """
+        if cls._trainer is None:
+            print("Trainer is not initialized")
+            return False
+
+        cls._trainer.set_mlflow_run_name(run_name)
+        return True
+
+    @classmethod
     def run_ml_training(cls, epochs: int) -> bool:
         """
         Once the data fetcher prepared and trainer is initialized
@@ -234,7 +275,6 @@ class MLTrainingServingApp:
             batch_size=len(time_series_dataset),
             shuffle=False
         )
-
 
         # check the model is initialized
         if cls._model is None:
@@ -263,8 +303,6 @@ class MLTrainingServingApp:
     def get_model(cls):
         return cls._model
 
-
 def get_app():
     app = MLTrainingServingApp()
     return app
-

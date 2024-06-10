@@ -50,6 +50,18 @@ class RunMLTrainingBody(BaseModel):
     kwargs: dict
 
 
+class SetMLflowModelNameBody(BaseModel):
+    model_name: str
+
+
+class SetMLflowExperimentNameBody(BaseModel):
+    experiment_name: str
+
+
+class SetMLflowRunNameBody(BaseModel):
+    run_name: str
+
+
 # Define the REST api endpoint
 @router.post("/ml_training_manager/set_data_fetcher")
 def set_data_fetcher(
@@ -77,9 +89,9 @@ def fetch_data_from_source(
         ml_trainer_app: MLTrainingServingApp = Depends(get_app)
 ):
     """
-    Init data processor
+    Fetch data from source
     :param ml_trainer_app:
-    :param request: InitDataProcessorBody
+    :param request: FetchDataFromSourceBody
     :return: JSONResponse
     """
     kwargs = request.kwargs
@@ -89,7 +101,7 @@ def fetch_data_from_source(
         request.kwargs
     )
 
-    return {"message": f"Init data processor successfully"}
+    return {"message": f"Fetched data successfully"}
 
 
 @router.post("/ml_training_manager/init_data_preprocessor")
@@ -100,7 +112,7 @@ def init_data_preprocessor(
     """
     Init data preprocessor
     :param ml_trainer_app:
-    :param request: SetDataFetcherBody
+    :param request: InitDataProcessorBody
     :return: JSONResponse
     """
     try:
@@ -127,7 +139,7 @@ def init_model(
     """
     Init model
     :param ml_trainer_app:
-    :param request: SetDataFetcherBody
+    :param request: InitModelBody
     :return: JSONResponse
     """
     model_type = request.model_type
@@ -144,9 +156,9 @@ def init_trainer(
         ml_trainer_app: MLTrainingServingApp = Depends(get_app)
 ):
     """
-    Setup trainer
+    Init trainer
     :param ml_trainer_app:
-    :param request: InitDataProcessorBody
+    :param request: InitTrainerBody
     :return: JSONResponse
     """
     trainer_type = request.trainer_type
@@ -157,6 +169,72 @@ def init_trainer(
     return {"message": f"Init trainer successfully"}
 
 
+@router.post("/ml_training_manager/set_mlflow_model_name")
+def set_mlflow_model_name(
+        request: SetMLflowModelNameBody = Body(...),
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Set MLflow model name
+    :param ml_trainer_app:
+    :param request: SetMLflowModelNameBody
+    :return: JSONResponse
+    """
+    model_name = request.model_name
+
+    if not ml_trainer_app.set_mlflow_model_name(model_name):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to set MLflow model name"}
+        )
+
+    return {"message": f"Set MLflow model name to {model_name} successfully"}
+
+
+@router.post("/ml_training_manager/set_mlflow_experiment_name")
+def set_mlflow_experiment_name(
+        request: SetMLflowExperimentNameBody = Body(...),
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Set MLflow experiment name
+    :param ml_trainer_app:
+    :param request: SetMLflowExperimentNameBody
+    :return: JSONResponse
+    """
+    experiment_name = request.experiment_name
+
+    if not ml_trainer_app.set_mlflow_experiment_name(experiment_name):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to set MLflow experiment name"}
+        )
+
+    return {"message": f"Set MLflow experiment name to {experiment_name} successfully"}
+
+
+@router.post("/ml_training_manager/set_mlflow_run_name")
+def set_mlflow_run_name(
+        request: SetMLflowRunNameBody = Body(...),
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Set MLflow run name
+    :param ml_trainer_app:
+    :param request: SetMLflowRunNameBody
+    :return: JSONResponse
+    """
+    run_name = request.run_name
+
+    if not ml_trainer_app.set_mlflow_run_name(run_name):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to set MLflow run name"}
+        )
+
+    return {"message": f"Set MLflow run name to {run_name} successfully"}
+
+
 @router.post("/ml_training_manager/run_ml_training")
 def run_ml_training(
         request: RunMLTrainingBody = Body(...),
@@ -165,7 +243,7 @@ def run_ml_training(
     """
     Run ml training
     :param ml_trainer_app:
-    :param request: InitDataProcessorBody
+    :param request: RunMLTrainingBody
     :return: JSONResponse
     """
     epochs = request.kwargs["epochs"]
