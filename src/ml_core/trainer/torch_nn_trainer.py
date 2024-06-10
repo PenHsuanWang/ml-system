@@ -1,11 +1,9 @@
 from torch.utils.data.dataloader import DataLoader
-
 from src.ml_core.trainer.base_trainer import BaseTrainer
 from src.model_ops_manager.mlflow_agent.mlflow_agent import NullMLFlowAgent
 
 
 class TorchNeuralNetworkTrainer(BaseTrainer):
-
     """
     A concrete class for torch neural network models
     """
@@ -46,6 +44,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         self._track_training_data_info = track_training_data_info
         self._track_metrics = track_metrics
         self._track_model_architecture = track_model_architecture
+        self._mlflow_model_name = "Pytorch_Model"  # Default model name
 
     def set_model(self, model):
         """
@@ -65,6 +64,14 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         :return:
         """
         self._training_data_loader = training_data_loader
+
+    def set_mlflow_model_name(self, model_name: str) -> None:
+        """
+        Provide the method to set the MLflow model name for tracking
+        :param model_name: The model name to be used in MLflow tracking
+        :return: None
+        """
+        self._mlflow_model_name = model_name
 
     def log_training_data_info(self):
         """
@@ -131,6 +138,6 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
             self._mlflow_agent.log_param("model_architecture", str(self._model))
 
         # Register the model
-        self._mlflow_agent.register_model(self._model, "Pytorch_Model")
+        self._mlflow_agent.register_model(self._model, self._mlflow_model_name)
         self._mlflow_agent.end_run()
         print("Training done")
