@@ -54,6 +54,14 @@ class SetMLflowModelNameBody(BaseModel):
     model_name: str
 
 
+class SetMLflowExperimentNameBody(BaseModel):
+    experiment_name: str
+
+
+class SetMLflowRunNameBody(BaseModel):
+    run_name: str
+
+
 # Define the REST api endpoint
 @router.post("/ml_training_manager/set_data_fetcher")
 def set_data_fetcher(
@@ -181,6 +189,50 @@ def set_mlflow_model_name(
         )
 
     return {"message": f"Set MLflow model name to {model_name} successfully"}
+
+
+@router.post("/ml_training_manager/set_mlflow_experiment_name")
+def set_mlflow_experiment_name(
+        request: SetMLflowExperimentNameBody = Body(...),
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Set MLflow experiment name
+    :param ml_trainer_app:
+    :param request: SetMLflowExperimentNameBody
+    :return: JSONResponse
+    """
+    experiment_name = request.experiment_name
+
+    if not ml_trainer_app.set_mlflow_experiment_name(experiment_name):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to set MLflow experiment name"}
+        )
+
+    return {"message": f"Set MLflow experiment name to {experiment_name} successfully"}
+
+
+@router.post("/ml_training_manager/set_mlflow_run_name")
+def set_mlflow_run_name(
+        request: SetMLflowRunNameBody = Body(...),
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Set MLflow run name
+    :param ml_trainer_app:
+    :param request: SetMLflowRunNameBody
+    :return: JSONResponse
+    """
+    run_name = request.run_name
+
+    if not ml_trainer_app.set_mlflow_run_name(run_name):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to set MLflow run name"}
+        )
+
+    return {"message": f"Set MLflow run name to {run_name} successfully"}
 
 
 @router.post("/ml_training_manager/run_ml_training")

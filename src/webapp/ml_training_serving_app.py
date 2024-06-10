@@ -223,6 +223,34 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
+    def set_mlflow_experiment_name(cls, experiment_name: str) -> bool:
+        """
+        Design for an exposed REST api to let client set the mlflow experiment name
+        :param experiment_name: The experiment name to be used in MLflow tracking
+        :return: True if experiment name is successfully set
+        """
+        if cls._trainer is None:
+            print("Trainer is not initialized")
+            return False
+
+        cls._trainer.set_mlflow_experiment_name(experiment_name)
+        return True
+
+    @classmethod
+    def set_mlflow_run_name(cls, run_name: str) -> bool:
+        """
+        Design for an exposed REST api to let client set the mlflow run name
+        :param run_name: The run name to be used in MLflow tracking
+        :return: True if run name is successfully set
+        """
+        if cls._trainer is None:
+            print("Trainer is not initialized")
+            return False
+
+        cls._trainer.set_mlflow_run_name(run_name)
+        return True
+
+    @classmethod
     def run_ml_training(cls, epochs: int) -> bool:
         """
         Once the data fetcher prepared and trainer is initialized

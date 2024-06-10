@@ -45,11 +45,13 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         self._track_metrics = track_metrics
         self._track_model_architecture = track_model_architecture
         self._mlflow_model_name = "Pytorch_Model"  # Default model name
+        self._mlflow_experiment_name = "ml-system-dev-test"  # Default experiment name
+        self._mlflow_run_name = "Pytorch Run"  # Default run name
 
     def set_model(self, model):
         """
         Provide the method to set the model
-        If the model is not prepare before, this method can be used to set the model.
+        If the model is not prepared before, this method can be used to set the model.
         The model is required to be a pytorch model, extract the model hyper-parameters from the model.
         :param model:
         :return:
@@ -59,7 +61,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
     def set_training_data_loader(self, training_data_loader: DataLoader) -> None:
         """
         Provide the method to set the training data and label
-        If the training tensor id not prepare before, this method can be used to set the training data and label
+        If the training tensor is not prepared before, this method can be used to set the training data and label
         :param training_data_loader: the torch DataLoader object
         :return:
         """
@@ -72,6 +74,22 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         :return: None
         """
         self._mlflow_model_name = model_name
+
+    def set_mlflow_experiment_name(self, experiment_name: str) -> None:
+        """
+        Provide the method to set the MLflow experiment name for tracking
+        :param experiment_name: The experiment name to be used in MLflow tracking
+        :return: None
+        """
+        self._mlflow_experiment_name = experiment_name
+
+    def set_mlflow_run_name(self, run_name: str) -> None:
+        """
+        Provide the method to set the MLflow run name for tracking
+        :param run_name: The run name to be used in MLflow tracking
+        :return: None
+        """
+        self._mlflow_run_name = run_name
 
     def log_training_data_info(self):
         """
@@ -96,8 +114,8 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
             raise RuntimeError("Model is not provided.")
 
         self._mlflow_agent.start_run(
-            experiment_name="ml-system-dev-test",
-            run_name="Pytorch Run"
+            experiment_name=self._mlflow_experiment_name,
+            run_name=self._mlflow_run_name
         )
 
         if self._track_hyperparameters:
