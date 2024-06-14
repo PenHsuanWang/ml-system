@@ -1,10 +1,9 @@
 import os
-
 import threading
-
 import mlflow
 import torch
 from torch.utils.data.dataloader import DataLoader
+import pandas as pd
 
 import src.webapp.data_io_serving_app
 import src.store.data_processor_store
@@ -86,31 +85,61 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_data_processor(cls, data_processor_type: str, **kwargs) -> bool:
+    def init_data_processor_from_df(cls, data_processor_type: str, dataframe_json: dict, **kwargs) -> bool:
+        """
+        Initialize the data processor from a JSON-encoded DataFrame.
+        :param data_processor_type: The type of data processor to initialize
+        :param dataframe_json: JSON-encoded DataFrame
+        :param kwargs: Additional parameters for the data processor
+        :return: True if data processor is successfully initialized
+        """
+        try:
+            dataframe = pd.DataFrame.from_records(dataframe_json["data"], columns=dataframe_json["columns"])
+            cls._raw_pandas_dataframe = dataframe
+            cls._data_processor = DataProcessorFactory.create_data_processor(
+                data_processor_type,
+                input_data=cls._raw_pandas_dataframe,
+                **kwargs
+            )
+            cls._data_processor_store.add_data_processor(
+                data_processor_id="pytorch_lstm_aapl",
+                data_processor=cls._data_processor
+            )
+        except Exception as e:
+            print("Failed to init data processor from DataFrame")
+            print(e)
+            return False
+
+        return True
+
+    @classmethod
+    def init_data_processor(cls, data_processor_type: str, dataframe: pd.DataFrame = None, **kwargs) -> bool:
         """
         Design for an exposed REST api to let client init the data preprocessor
         To initialize the data preprocessor
         Initialize parameters from kwargs provided by client via REST api request body.
-        if data fetcher is ready:
-         check the raw dataframe is ready or not. trigger data fetcher to fetch data and get the raw dataframe.
-        or raise exception to teach user to init data fetcher first.
-        :param data_processor_type:
-        :param kwargs:
-        :return:
+        If a DataFrame is provided, it will be used instead of fetching data from the data fetcher.
+        :param data_processor_type: The type of data processor to initialize
+        :param dataframe: Optional pandas DataFrame containing the data to process
+        :param kwargs: Additional parameters for the data processor
+        :return: True if data processor is successfully initialized
         """
 
-        # check the self._raw_pandas_dataframe is ready or not, else get the raw dataframe from data fetcher
-        # if the fetcher is not initialized, raise exception to teach user to init data fetcher first.
-        if cls._data_fetcher is None:
-            print("Data fetcher is not initialized")
-            return False
-        if not cls._raw_pandas_dataframe:
-            try:
-                cls._raw_pandas_dataframe = cls._data_fetcher.get_as_dataframe()
-            except ValueError as ve:
-                print("Failed to get data from data fetcher, try fetcher again")
-                cls._raw_pandas_dataframe = cls._data_fetcher.fetch_from_source()
-                cls._raw_pandas_dataframe = cls._data_fetcher.get_as_dataframe()
+        if dataframe is not None:
+            # Use the provided DataFrame
+            cls._raw_pandas_dataframe = dataframe
+        else:
+            # Check if the data fetcher is initialized
+            if cls._data_fetcher is None:
+                print("Data fetcher is not initialized")
+                return False
+            if not cls._raw_pandas_dataframe:
+                try:
+                    cls._raw_pandas_dataframe = cls._data_fetcher.get_as_dataframe()
+                except ValueError as ve:
+                    print("Failed to get data from data fetcher, try fetcher again")
+                    cls._raw_pandas_dataframe = cls._data_fetcher.fetch_from_source()
+                    cls._raw_pandas_dataframe = cls._data_fetcher.get_as_dataframe()
 
         try:
             cls._data_processor = DataProcessorFactory.create_data_processor(
@@ -118,13 +147,14 @@ class MLTrainingServingApp:
                 input_data=cls._raw_pandas_dataframe,
                 **kwargs
             )
-            # register the data processor to data processor manager
+            # Register the data processor to data processor manager
             cls._data_processor_store.add_data_processor(
                 data_processor_id="pytorch_lstm_aapl",
                 data_processor=cls._data_processor
             )
         except Exception as e:
             print("Failed to init data processor")
+            print(e)
             return False
 
         return True
@@ -135,9 +165,9 @@ class MLTrainingServingApp:
         Design for an exposed REST api to let client init the model
         To initialize the model
         Initialize parameters from kwargs provided by client via REST api request body.
-        :param model_type:
-        :param kwargs:
-        :return:
+        :param model_type: The type of model to initialize
+        :param kwargs: Additional parameters for the model
+        :return: True if model is successfully initialized
         """
         try:
             cls._model = TorchNeuralNetworkModelFactory.create_torch_nn_model(
@@ -155,11 +185,11 @@ class MLTrainingServingApp:
         Design for an exposed REST api to let client init the trainer
         To initialize the trainer
         Initialize parameters from kwargs provided by client via REST api request body.
-        The trainer provide the function to add mlflow agent to log the training process and register the model
+        The trainer provides the function to add mlflow agent to log the training process and register the model
         create mlflow agent and setting the tracking uri here.
-        :param trainer_type:
-        :param kwargs:
-        :return:
+        :param trainer_type: The type of trainer to initialize
+        :param kwargs: Additional parameters for the trainer
+        :return: True if trainer is successfully initialized
         """
 
         if cls._model is None:
@@ -174,7 +204,7 @@ class MLTrainingServingApp:
         if kwargs["optimizer"] == "adam":
             optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs["learning_rate"]))
 
-        # extract the mlflow environment variables from kwargs
+        # Extract the mlflow environment variables from kwargs
 
         mlflow_agent = NullMLFlowAgent()
         try:
@@ -182,7 +212,7 @@ class MLTrainingServingApp:
             mlflow_tracking_password = kwargs["mlflow_tracking_password"]
             mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
 
-            # check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
+            # Check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
             if mlflow_tracking_uri:
                 mlflow_agent = MLFlowAgent()
 
@@ -259,7 +289,7 @@ class MLTrainingServingApp:
         :return: True if training is successful
         """
 
-        # check the data_preprocessor is ready
+        # Check the data processor is ready
         if cls._data_processor is None:
             print("Data processor is not initialized")
             return False
@@ -276,12 +306,12 @@ class MLTrainingServingApp:
             shuffle=False
         )
 
-        # check the model is initialized
+        # Check the model is initialized
         if cls._model is None:
             print("Model is not initialized")
             return False
 
-        # check the trainer is ready, model and training data is set
+        # Check the trainer is ready, model and training data is set
         if cls._trainer is None:
             print("Trainer is not initialized")
             return False

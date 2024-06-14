@@ -7,6 +7,7 @@ import os
 from fastapi import APIRouter, Depends, Body
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from typing import List, Dict
 
 from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
 
@@ -24,6 +25,17 @@ class SetDataFetcherBody(BaseModel):
 
 class FetchDataFromSourceBody(BaseModel):
     args: list
+    kwargs: dict
+
+
+class DataFramePayload(BaseModel):
+    data: List[Dict]
+    columns: List[str]
+
+
+class InitDataProcessorFromDFBody(BaseModel):
+    data_processor_type: str
+    dataframe: DataFramePayload
     kwargs: dict
 
 
@@ -102,6 +114,34 @@ def fetch_data_from_source(
     )
 
     return {"message": f"Fetched data successfully"}
+
+
+@router.post("/ml_training_manager/init_data_preprocessor_from_df")
+def init_data_preprocessor_from_df(
+        request: InitDataProcessorFromDFBody = Body(...),
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Init data preprocessor from a DataFrame
+    :param ml_trainer_app:
+    :param request: InitDataProcessorFromDFBody
+    :return: JSONResponse
+    """
+    try:
+        data_processor_type = request.data_processor_type
+        dataframe_json = request.dataframe.dict()
+        kwargs = request.kwargs
+
+        ml_trainer_app.init_data_processor_from_df(data_processor_type, dataframe_json, **kwargs)
+
+        return {"message": "Init data preprocessor from DataFrame successfully"}
+
+    except Exception as e:
+        print(e)
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Init data preprocessor from DataFrame failed"}
+        )
 
 
 @router.post("/ml_training_manager/init_data_preprocessor")
