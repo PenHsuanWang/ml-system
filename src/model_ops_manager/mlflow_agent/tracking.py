@@ -44,17 +44,18 @@ class MLFlowTracking:
             mlflow.log_param(key, value)
 
     @staticmethod
-    def log_metric(key: str, value: float) -> None:
+    def log_metric(key: str, value: float, step: Optional[int] = None) -> None:
         """
         The method to log a metric key value pair to MLFlow
         :param key:
         :param value:
+        :param step: A single integer step at which to log the specified metric. If unspecified, the metric is logged at step zero.
         :return:
         """
-        mlflow.log_metric(key, value)
+        mlflow.log_metric(key, value, step=step)
 
     @staticmethod
-    def log_metrics_many(metrics: dict[str, float], step: Optional[int]) -> None:
+    def log_metrics_many(metrics: dict[str, float], step: Optional[int] = None) -> None:
         """
         The method to log many metrics in dictionary format to MLFlow
         :param metrics: dictionary of metrics
@@ -63,6 +64,4 @@ class MLFlowTracking:
         :return:
         """
         mlflow.log_metrics(metrics, step=step)
-
-
 
