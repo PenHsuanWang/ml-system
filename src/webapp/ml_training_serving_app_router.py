@@ -14,7 +14,6 @@ from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
 # Definition of FastAPI router
 router = APIRouter()
 
-
 # Define the pydantic model for request body
 
 class SetDataFetcherBody(BaseModel):
@@ -47,13 +46,13 @@ class InitDataProcessorBody(BaseModel):
 
 class InitModelBody(BaseModel):
     model_type: str
-    args: list
+    model_id: str
     kwargs: dict
 
 
 class InitTrainerBody(BaseModel):
     trainer_type: str
-    args: list
+    trainer_id: str
     kwargs: dict
 
 
@@ -183,9 +182,14 @@ def init_model(
     :return: JSONResponse
     """
     model_type = request.model_type
+    model_id = request.model_id
     kwargs = request.kwargs
 
-    ml_trainer_app.init_model(model_type, **kwargs)
+    if not ml_trainer_app.init_model(model_type, model_id, **kwargs):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to initialize model"}
+        )
 
     return {"message": f"Init model successfully"}
 
@@ -202,9 +206,14 @@ def init_trainer(
     :return: JSONResponse
     """
     trainer_type = request.trainer_type
+    trainer_id = request.trainer_id
     kwargs = request.kwargs
 
-    ml_trainer_app.init_trainer(trainer_type, **kwargs)
+    if not ml_trainer_app.init_trainer(trainer_type, trainer_id, **kwargs):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to initialize trainer"}
+        )
 
     return {"message": f"Init trainer successfully"}
 
@@ -288,7 +297,50 @@ def run_ml_training(
     """
     epochs = request.kwargs["epochs"]
 
-    ml_trainer_app.run_ml_training(epochs)
+    if not ml_trainer_app.run_ml_training(epochs):
+        return JSONResponse(
+            status_code=422,
+            content={"message": "Failed to run ML training"}
+        )
 
-    return {"message": f"Run ml training successfully"}
+    return {"message": f"Run ML training successfully"}
 
+
+@router.get("/ml_training_manager/get_trainer/{trainer_id}")
+def get_trainer(
+        trainer_id: str,
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Get trainer by ID
+    :param trainer_id: Trainer ID
+    :param ml_trainer_app: MLTrainingServingApp
+    :return: JSONResponse
+    """
+    trainer = ml_trainer_app.get_trainer(trainer_id)
+    if trainer:
+        return {"trainer": str(trainer)}
+    return JSONResponse(
+        status_code=404,
+        content={"message": "Trainer not found"}
+    )
+
+
+@router.get("/ml_training_manager/get_model/{model_id}")
+def get_model(
+        model_id: str,
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
+    """
+    Get model by ID
+    :param model_id: Model ID
+    :param ml_trainer_app: MLTrainingServingApp
+    :return: JSONResponse
+    """
+    model = ml_trainer_app.get_model(model_id)
+    if model:
+        return {"model": str(model)}
+    return JSONResponse(
+        status_code=404,
+        content={"message": "Model not found"}
+    )

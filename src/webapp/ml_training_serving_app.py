@@ -7,12 +7,13 @@ import pandas as pd
 
 import src.webapp.data_io_serving_app
 import src.store.data_processor_store
+import src.store.trainer_store
+import src.store.model_store
 from src.ml_core.data_processor.data_processor import DataProcessorFactory
 from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 from src.ml_core.trainer.trainer import TrainerFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent, NullMLFlowAgent
-
 
 class MLTrainingServingApp:
     """
@@ -24,13 +25,13 @@ class MLTrainingServingApp:
 
     _data_io_serving_app = src.webapp.data_io_serving_app.get_app()
     _data_processor_store = src.store.data_processor_store.get_store()
+    _trainer_store = src.store.trainer_store.get_trainer_store()
+    _model_store = src.store.model_store.get_model_store()
 
-    # internal module tools for ml training job
     _data_fetcher = None
     _data_processor = None
     _trainer = None
 
-    # the port of object join the ml training job
     _raw_pandas_dataframe = None
     _training_tensor = None
     _training_target_tensor = None
@@ -53,7 +54,6 @@ class MLTrainingServingApp:
         :param data_fetcher_name: data fetcher name
         :return: True if data fetcher is successfully initialized
         """
-        # if the data fetcher is already initialized, overwrite it.
         cls._data_io_serving_app = src.webapp.data_io_serving_app.get_app()
         try:
             print(cls._data_io_serving_app.data_fetcher)
@@ -160,12 +160,13 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_model(cls, model_type: str, **kwargs) -> bool:
+    def init_model(cls, model_type: str, model_id: str, **kwargs) -> bool:
         """
         Design for an exposed REST api to let client init the model
         To initialize the model
         Initialize parameters from kwargs provided by client via REST api request body.
         :param model_type: The type of model to initialize
+        :param model_id: The ID to associate with the model in the store
         :param kwargs: Additional parameters for the model
         :return: True if model is successfully initialized
         """
@@ -174,13 +175,14 @@ class MLTrainingServingApp:
                 model_type,
                 **kwargs
             )
+            cls._model_store.add_model(model_id, cls._model)
         except Exception as e:
             print("Failed to init model")
             return False
         return True
 
     @classmethod
-    def init_trainer(cls, trainer_type: str, **kwargs) -> bool:
+    def init_trainer(cls, trainer_type: str, trainer_id: str, **kwargs) -> bool:
         """
         Design for an exposed REST api to let client init the trainer
         To initialize the trainer
@@ -188,6 +190,7 @@ class MLTrainingServingApp:
         The trainer provides the function to add mlflow agent to log the training process and register the model
         create mlflow agent and setting the tracking uri here.
         :param trainer_type: The type of trainer to initialize
+        :param trainer_id: The ID to associate with the trainer in the store
         :param kwargs: Additional parameters for the trainer
         :return: True if trainer is successfully initialized
         """
@@ -205,23 +208,18 @@ class MLTrainingServingApp:
             optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs["learning_rate"]))
 
         # Extract the mlflow environment variables from kwargs
-
         mlflow_agent = NullMLFlowAgent()
         try:
             mlflow_tracking_username = kwargs["mlflow_tracking_username"]
             mlflow_tracking_password = kwargs["mlflow_tracking_password"]
             mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
 
-            # Check mlflow_tracking_uri is provided and valid, else skip mlflow agent initialization
             if mlflow_tracking_uri:
                 mlflow_agent = MLFlowAgent()
-
                 os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username
                 os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password
                 mlflow_agent.set_tracking_uri(mlflow_tracking_uri)
-
                 # TODO: test mlflow_agent is connected to mlflow server
-
         except KeyError:
             pass
 
@@ -233,6 +231,7 @@ class MLTrainingServingApp:
                 device=torch.device(kwargs["device"]),
                 mlflow_agent=mlflow_agent
             )
+            cls._trainer_store.add_trainer(trainer_id, cls._trainer)
         except Exception as e:
             print("Failed to init trainer")
             return False
@@ -330,8 +329,22 @@ class MLTrainingServingApp:
         cls._model.eval()
 
     @classmethod
-    def get_model(cls):
-        return cls._model
+    def get_model(cls, model_id: str):
+        """
+        Get the model by model_id
+        :param model_id: The ID of the model to fetch
+        :return: The model object if found, else None
+        """
+        return cls._model_store.get_model(model_id)
+
+    @classmethod
+    def get_trainer(cls, trainer_id: str):
+        """
+        Get the trainer by trainer_id
+        :param trainer_id: The ID of the trainer to fetch
+        :return: The trainer object if found, else None
+        """
+        return cls._trainer_store.get_trainer(trainer_id)
 
 def get_app():
     app = MLTrainingServingApp()
