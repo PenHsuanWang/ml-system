@@ -1,4 +1,3 @@
-
 import requests
 import pandas as pd
 import os
@@ -15,7 +14,7 @@ def post_request(endpoint, json_data):
 
 # Function to make GET requests to the API
 def get_request(endpoint):
-    response = requests.get(f"{BASE_URL}/{endpoint}")
+    response = requests.get(f"http://localhost:8000/{endpoint}")
     if response.status_code != 200:
         raise Exception(f"Request to {endpoint} failed: {response.json()}")
     return response.json()
@@ -58,9 +57,14 @@ def example_run_ml_training(epochs):
     )
     print(response.json())
 
-# Get the trained model
-def example_get_model():
-    response = get_request("get_model")
+# Get MLflow models
+def example_get_mlflow_models():
+    response = get_request("mlflow/models")
+    print(response)
+
+# Get MLflow model details
+def example_get_mlflow_model_details(model_name, version):
+    response = get_request(f"mlflow/models/details/{model_name}/{version}")
     print(response)
 
 def main():
@@ -116,7 +120,7 @@ def main():
             "loss_function": "mse",
             "optimizer": "adam",
             "learning_rate": 0.001,
-            "device": "mps",
+            "device": "cpu",
             "mlflow_tracking_uri": MLFLOW_TRACKING_URI,
             "mlflow_tracking_username": MLFLOW_TRACKING_USERNAME,
             "mlflow_tracking_password": MLFLOW_TRACKING_PASSWORD
@@ -136,8 +140,11 @@ def main():
     # Step 8: Run ML training
     example_run_ml_training(epochs=20)
 
-    # Step 9: Get the trained model
-    example_get_model()
+    # Step 9: Get MLflow models
+    example_get_mlflow_models()
+
+    # Step 10: Get MLflow model details
+    example_get_mlflow_model_details(MODEL_NAME, 3)
 
 if __name__ == "__main__":
     main()
