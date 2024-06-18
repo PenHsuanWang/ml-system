@@ -323,10 +323,12 @@ class MLTrainingServingApp:
             cls._trainer.run_training_loop(epochs)
             print("Training finished")
         except RuntimeError as re:
-            print(re)
+            print(f"RuntimeError during training: {re}")
             return False
 
         cls._model.eval()
+
+        return True
 
     @classmethod
     def get_model(cls, model_id: str):

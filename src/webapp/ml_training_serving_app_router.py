@@ -295,15 +295,20 @@ def run_ml_training(
     :param request: RunMLTrainingBody
     :return: JSONResponse
     """
+    print(f"Received run_ml_training request: {request}")
+
     epochs = request.kwargs["epochs"]
 
     if not ml_trainer_app.run_ml_training(epochs):
+        print("run_ml_training failed.")
         return JSONResponse(
             status_code=422,
             content={"message": "Failed to run ML training"}
         )
 
-    return {"message": f"Run ML training successfully"}
+    print("run_ml_training succeeded.")
+    return {"message": "Run ML training successfully"}
+
 
 
 @router.get("/ml_training_manager/get_trainer/{trainer_id}")

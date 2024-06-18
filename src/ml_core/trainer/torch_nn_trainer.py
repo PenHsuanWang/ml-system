@@ -2,7 +2,6 @@ from torch.utils.data.dataloader import DataLoader
 from src.ml_core.trainer.base_trainer import BaseTrainer
 from src.model_ops_manager.mlflow_agent.mlflow_agent import NullMLFlowAgent
 
-
 class TorchNeuralNetworkTrainer(BaseTrainer):
     """
     A concrete class for torch neural network models
@@ -130,32 +129,39 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         print(f"Training the model for {epochs} epochs")
         self._model.train()
 
-        for epoch in range(epochs):
-            for i, data in enumerate(self._training_data_loader):
-                x, y = data
-                x = x.to(self._device)
-                y = y.to(self._device)
+        try:
+            for epoch in range(epochs):
+                for i, data in enumerate(self._training_data_loader):
+                    x, y = data
+                    x = x.to(self._device)
+                    y = y.to(self._device)
 
-                self._model.to(self._device)
-                self._model.train()
-                outputs = self._model(x)
-                loss = self._criterion(outputs, y)
+                    self._model.to(self._device)
+                    self._model.train()
+                    outputs = self._model(x)
+                    loss = self._criterion(outputs, y)
 
-                self._optimizer.zero_grad()
-                loss.backward()
-                self._optimizer.step()
+                    self._optimizer.zero_grad()
+                    loss.backward()
+                    self._optimizer.step()
 
-                if self._track_metrics:
-                    # Log loss metric
-                    self._mlflow_agent.log_metric("loss", loss.item(), step=epoch)
+                    if self._track_metrics:
+                        # Log loss metric
+                        self._mlflow_agent.log_metric("loss", loss.item(), step=epoch)
 
-                print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
+                    print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
 
-        if self._track_model_architecture:
-            # Log model architecture
-            self._mlflow_agent.log_param("model_architecture", str(self._model))
+            if self._track_model_architecture:
+                # Log model architecture
+                self._mlflow_agent.log_param("model_architecture", str(self._model))
 
-        # Register the model
-        self._mlflow_agent.register_model(self._model, self._mlflow_model_name)
-        self._mlflow_agent.end_run()
-        print("Training done")
+            # Register the model
+            self._mlflow_agent.register_model(self._model, self._mlflow_model_name)
+            print("Model registered with MLflow successfully.")
+        except Exception as e:
+            print(f"Error during training loop or model registration: {e}")
+            raise e
+        finally:
+            self._mlflow_agent.end_run()
+            print("Training run ended.")
+

@@ -14,7 +14,7 @@ def post_request(endpoint, json_data):
 
 # Function to make GET requests to the API
 def get_request(endpoint):
-    response = requests.get(f"http://localhost:8000/{endpoint}")
+    response = requests.get(f"{BASE_URL}/{endpoint}")
     if response.status_code != 200:
         raise Exception(f"Request to {endpoint} failed: {response.json()}")
     return response.json()
@@ -51,11 +51,14 @@ def example_set_mlflow_run_name(run_name):
 
 # Run ML training
 def example_run_ml_training(epochs):
-    response = requests.post(
-        f"{BASE_URL}/run_ml_training",
-        json={"args": [], "kwargs": {"epochs": epochs}}
-    )
-    print(response.json())
+    try:
+        response = post_request(
+            "run_ml_training",
+            json_data={"args": [], "kwargs": {"epochs": epochs}}
+        )
+        print(response)
+    except Exception as e:
+        print(f"Failed to run ML training: {e}")
 
 # Get MLflow models
 def example_get_mlflow_models():
