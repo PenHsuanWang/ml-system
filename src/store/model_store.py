@@ -37,6 +37,12 @@ class ModelStore:
             return True
         return False
 
+    @classmethod
+    def update_model(cls, model_id: str, new_model: object) -> bool:
+        if cls._is_model_exist(model_id):
+            cls._model_store[model_id] = new_model
+            return True
+        return False
+
 def get_model_store():
     return ModelStore()
-

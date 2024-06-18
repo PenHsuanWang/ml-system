@@ -124,7 +124,6 @@ class MLTrainingServingApp:
         :param kwargs: Additional parameters for the data processor
         :return: True if data processor is successfully initialized
         """
-
         if dataframe is not None:
             # Use the provided DataFrame
             cls._raw_pandas_dataframe = dataframe
@@ -194,7 +193,6 @@ class MLTrainingServingApp:
         :param kwargs: Additional parameters for the trainer
         :return: True if trainer is successfully initialized
         """
-
         if cls._model is None:
             print("Model is not initialized")
             return False
@@ -287,7 +285,6 @@ class MLTrainingServingApp:
         :param epochs: training epochs
         :return: True if training is successful
         """
-
         # Check the data processor is ready
         if cls._data_processor is None:
             print("Data processor is not initialized")
@@ -327,7 +324,6 @@ class MLTrainingServingApp:
             return False
 
         cls._model.eval()
-
         return True
 
     @classmethod
@@ -347,6 +343,54 @@ class MLTrainingServingApp:
         :return: The trainer object if found, else None
         """
         return cls._trainer_store.get_trainer(trainer_id)
+
+    @classmethod
+    def get_data_processor(cls, data_processor_id: str):
+        """
+        Get the data processor by data_processor_id
+        :param data_processor_id: The ID of the data processor to fetch
+        :return: The data processor object if found, else None
+        """
+        return cls._data_processor_store.get_data_processor(data_processor_id)
+
+    @classmethod
+    def list_models(cls) -> list:
+        return list(cls._model_store._model_store.keys())
+
+    @classmethod
+    def list_trainers(cls) -> list:
+        return list(cls._trainer_store._trainer_store.keys())
+
+    @classmethod
+    def list_data_processors(cls) -> list:
+        return list(cls._data_processor_store._data_processor_store.keys())
+
+    @classmethod
+    def update_model(cls, model_id: str, model_params: dict) -> bool:
+        model = cls._model_store.get_model(model_id)
+        if model:
+            for param, value in model_params.items():
+                setattr(model, param, value)
+            return cls._model_store.update_model(model_id, model)
+        return False
+
+    @classmethod
+    def update_trainer(cls, trainer_id: str, trainer_params: dict) -> bool:
+        trainer = cls._trainer_store.get_trainer(trainer_id)
+        if trainer:
+            for param, value in trainer_params.items():
+                setattr(trainer, param, value)
+            return cls._trainer_store.update_trainer(trainer_id, trainer)
+        return False
+
+    @classmethod
+    def update_data_processor(cls, data_processor_id: str, data_processor_params: dict) -> bool:
+        data_processor = cls._data_processor_store.get_data_processor(data_processor_id)
+        if data_processor:
+            for param, value in data_processor_params.items():
+                setattr(data_processor, param, value)
+            return cls._data_processor_store.update_data_processor(data_processor_id, data_processor)
+        return False
 
 def get_app():
     app = MLTrainingServingApp()

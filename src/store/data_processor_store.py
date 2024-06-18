@@ -1,6 +1,4 @@
-
 import threading
-
 
 class DataProcessStore:
     """
@@ -9,7 +7,6 @@ class DataProcessStore:
     """
     _app = None
     _app_lock = threading.Lock()
-
     _data_processor_store = {}
 
     def __new__(cls, *args, **kwargs):
@@ -41,10 +38,8 @@ class DataProcessStore:
         :param data_processor: the data processor object
         :return:
         """
-
         if cls._is_data_process_exist(data_processor_id):
             return False
-
         cls._data_processor_store[data_processor_id] = data_processor
         return True
 
@@ -55,7 +50,6 @@ class DataProcessStore:
         :param data_processor_id: provided by register
         :return: the data processor object
         """
-
         try:
             return cls._data_processor_store[data_processor_id]
         except KeyError:
@@ -69,13 +63,18 @@ class DataProcessStore:
         :param data_processor_id: provided by register
         :return: True if remove success, False if not
         """
-
         if cls._is_data_process_exist(data_processor_id):
             del cls._data_processor_store[data_processor_id]
             return True
         else:
             return False
 
+    @classmethod
+    def update_data_processor(cls, data_processor_id: str, new_data_processor: object) -> bool:
+        if cls._is_data_process_exist(data_processor_id):
+            cls._data_processor_store[data_processor_id] = new_data_processor
+            return True
+        return False
 
 def get_store():
     """

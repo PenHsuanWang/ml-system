@@ -37,6 +37,12 @@ class TrainerStore:
             return True
         return False
 
+    @classmethod
+    def update_trainer(cls, trainer_id: str, new_trainer: object) -> bool:
+        if cls._is_trainer_exist(trainer_id):
+            cls._trainer_store[trainer_id] = new_trainer
+            return True
+        return False
+
 def get_trainer_store():
     return TrainerStore()
-
