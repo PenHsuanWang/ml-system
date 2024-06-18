@@ -80,7 +80,7 @@ def main():
     example_set_mlflow_settings(MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD)
 
     # Step 1: Read local CSV file and convert to DataFrame
-    csv_file_path = "/Users/pwang/Developer/yfinance-stock-analyzer-lstm/data/raw_data/AAPL.csv"
+    csv_file_path = "/home/pwang/pwang-dev/ml-system/AAPL.csv"
     df = pd.read_csv(csv_file_path)
     dataframe_payload = {
         "data": df.to_dict(orient="records"),
@@ -103,7 +103,7 @@ def main():
     # Step 3: Initialize the model
     init_model_response = post_request("init_model", {
         "model_type": "lstm",
-        "args": [],
+        "model_id": "unique_model_id",  # Ensure model_id is included
         "kwargs": {
             "input_size": 2,
             "hidden_size": 128,
@@ -115,7 +115,7 @@ def main():
     # Step 4: Initialize the trainer
     init_trainer_response = post_request("init_trainer", {
         "trainer_type": "torch_nn",
-        "args": [],
+        "trainer_id": "unique_trainer_id",  # Ensure trainer_id is included
         "kwargs": {
             "loss_function": "mse",
             "optimizer": "adam",
