@@ -85,9 +85,10 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_data_processor_from_df(cls, data_processor_type: str, dataframe_json: dict, **kwargs) -> bool:
+    def init_data_processor_from_df(cls, data_processor_id: str, data_processor_type: str, dataframe_json: dict, **kwargs) -> bool:
         """
         Initialize the data processor from a JSON-encoded DataFrame.
+        :param data_processor_id: The ID of the data processor to initialize
         :param data_processor_type: The type of data processor to initialize
         :param dataframe_json: JSON-encoded DataFrame
         :param kwargs: Additional parameters for the data processor
@@ -102,7 +103,7 @@ class MLTrainingServingApp:
                 **kwargs
             )
             cls._data_processor_store.add_data_processor(
-                data_processor_id="pytorch_lstm_aapl",
+                data_processor_id=data_processor_id,
                 data_processor=cls._data_processor
             )
         except Exception as e:
@@ -113,12 +114,13 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_data_processor(cls, data_processor_type: str, dataframe: pd.DataFrame = None, **kwargs) -> bool:
+    def init_data_processor(cls, data_processor_id: str, data_processor_type: str, dataframe: pd.DataFrame = None, **kwargs) -> bool:
         """
         Design for an exposed REST api to let client init the data preprocessor
         To initialize the data preprocessor
         Initialize parameters from kwargs provided by client via REST api request body.
         If a DataFrame is provided, it will be used instead of fetching data from the data fetcher.
+        :param data_processor_id: The ID of the data processor to initialize
         :param data_processor_type: The type of data processor to initialize
         :param dataframe: Optional pandas DataFrame containing the data to process
         :param kwargs: Additional parameters for the data processor
@@ -148,7 +150,7 @@ class MLTrainingServingApp:
             )
             # Register the data processor to data processor manager
             cls._data_processor_store.add_data_processor(
-                data_processor_id="pytorch_lstm_aapl",
+                data_processor_id=data_processor_id,
                 data_processor=cls._data_processor
             )
         except Exception as e:

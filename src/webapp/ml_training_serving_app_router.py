@@ -33,12 +33,14 @@ class DataFramePayload(BaseModel):
 
 
 class InitDataProcessorFromDFBody(BaseModel):
+    data_processor_id: str
     data_processor_type: str
     dataframe: DataFramePayload
     kwargs: dict
 
 
 class InitDataProcessorBody(BaseModel):
+    data_processor_id: str
     data_processor_type: str
     args: list
     kwargs: dict
@@ -139,11 +141,12 @@ def init_data_preprocessor_from_df(
     :return: JSONResponse
     """
     try:
+        data_processor_id = request.data_processor_id
         data_processor_type = request.data_processor_type
         dataframe_json = request.dataframe.dict()
         kwargs = request.kwargs
 
-        ml_trainer_app.init_data_processor_from_df(data_processor_type, dataframe_json, **kwargs)
+        ml_trainer_app.init_data_processor_from_df(data_processor_id, data_processor_type, dataframe_json, **kwargs)
 
         return {"message": "Init data preprocessor from DataFrame successfully"}
 
@@ -167,10 +170,11 @@ def init_data_preprocessor(
     :return: JSONResponse
     """
     try:
+        data_processor_id = request.data_processor_id
         data_processor_type = request.data_processor_type
         kwargs = request.kwargs
 
-        ml_trainer_app.init_data_processor(data_processor_type, **kwargs)
+        ml_trainer_app.init_data_processor(data_processor_id, data_processor_type, **kwargs)
 
         return {"message": f"Init data preprocessor successfully"}
 
@@ -320,7 +324,6 @@ def run_ml_training(
 
     print("run_ml_training succeeded.")
     return {"message": "Run ML training successfully"}
-
 
 
 @router.get("/ml_training_manager/get_trainer/{trainer_id}")

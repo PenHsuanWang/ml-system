@@ -19,6 +19,13 @@ def get_request(endpoint):
         raise Exception(f"Request to {endpoint} failed: {response.json()}")
     return response.json()
 
+# Function to make PUT requests to the API
+def put_request(endpoint, json_data):
+    response = requests.put(f"{BASE_URL}/{endpoint}", json=json_data)
+    if response.status_code != 200:
+        raise Exception(f"Request to {endpoint} failed: {response.json()}")
+    return response.json()
+
 # Set MLflow settings
 def example_set_mlflow_settings(mlflow_tracking_uri, mlflow_tracking_username, mlflow_tracking_password):
     os.environ['MLFLOW_TRACKING_URI'] = mlflow_tracking_uri
@@ -62,12 +69,46 @@ def example_run_ml_training(epochs):
 
 # Get MLflow models
 def example_get_mlflow_models():
-    response = get_request("mlflow/models")
+    response = get_request("ml_training_manager/list_models")
     print(response)
 
 # Get MLflow model details
-def example_get_mlflow_model_details(model_name, version):
-    response = get_request(f"mlflow/models/details/{model_name}/{version}")
+def example_get_mlflow_model_details(model_id):
+    response = get_request(f"ml_training_manager/get_model/{model_id}")
+    print(response)
+
+# List trainers
+def example_list_trainers():
+    response = get_request("ml_training_manager/list_trainers")
+    print(response)
+
+# List data processors
+def example_list_data_processors():
+    response = get_request("ml_training_manager/list_data_processors")
+    print(response)
+
+# Update model
+def example_update_model(model_id, new_params):
+    response = put_request(
+        f"ml_training_manager/update_model/{model_id}",
+        {"params": new_params}
+    )
+    print(response)
+
+# Update trainer
+def example_update_trainer(trainer_id, new_params):
+    response = put_request(
+        f"ml_training_manager/update_trainer/{trainer_id}",
+        {"params": new_params}
+    )
+    print(response)
+
+# Update data processor
+def example_update_data_processor(data_processor_id, new_params):
+    response = put_request(
+        f"ml_training_manager/update_data_processor/{data_processor_id}",
+        {"params": new_params}
+    )
     print(response)
 
 def main():
@@ -92,6 +133,7 @@ def main():
 
     # Step 2: Initialize the data processor from the DataFrame
     init_data_processor_response = post_request("ml_training_manager/init_data_preprocessor_from_df", {
+        "data_processor_id": "example_data_processor_id",
         "data_processor_type": "time_series",
         "dataframe": dataframe_payload,
         "kwargs": {
@@ -143,11 +185,26 @@ def main():
     # Step 8: Run ML training
     example_run_ml_training(epochs=20)
 
-    # Step 9: Get MLflow models
+    # Step 9: List models
     example_get_mlflow_models()
 
-    # Step 10: Get MLflow model details
-    example_get_mlflow_model_details(MODEL_NAME, 3)
+    # Step 10: List trainers
+    example_list_trainers()
+
+    # Step 11: List data processors
+    example_list_data_processors()
+
+    # Step 12: Update model
+    example_update_model("unique_model_id", {"hidden_size": 256})
+
+    # Step 13: Update trainer
+    example_update_trainer("unique_trainer_id", {"learning_rate": 0.002})
+
+    # Step 14: Update data processor
+    example_update_data_processor("example_data_processor_id", {"new_param": "new_value"})
+
+    # Step 15: List data processors again to confirm the update
+    example_list_data_processors()
 
 if __name__ == "__main__":
     main()
