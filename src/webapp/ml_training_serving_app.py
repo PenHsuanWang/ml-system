@@ -294,10 +294,13 @@ class MLTrainingServingApp:
 
         cls._data_processor.preprocess_data()
 
-        time_series_dataset = TimeSeriesDataset(
-            cls._data_processor.get_training_data_x(),
-            cls._data_processor.get_training_target_y()
-        )
+        training_data = cls._data_processor.get_training_data_x()
+        training_target = cls._data_processor.get_training_target_y()
+
+        print(f"Training data shape: {training_data.shape}")
+        print(f"Training target shape: {training_target.shape}")
+
+        time_series_dataset = TimeSeriesDataset(training_data, training_target)
         torch_dataloader = DataLoader(
             time_series_dataset,
             batch_size=len(time_series_dataset),
@@ -391,8 +394,21 @@ class MLTrainingServingApp:
         if data_processor:
             for param, value in data_processor_params.items():
                 setattr(data_processor, param, value)
-            return cls._data_processor_store.update_data_processor(data_processor_id, data_processor)
+            
+            # Ensure data shape is consistent with model input
+            original_shape = data_processor.get_training_data_x().shape
+            if cls._data_processor_store.update_data_processor(data_processor_id, data_processor):
+                updated_shape = data_processor.get_training_data_x().shape
+                print(f"Updated data processor {data_processor_id} with new params: {data_processor_params}")
+                print(f"Original training data shape: {original_shape}")
+                print(f"Updated training data shape: {updated_shape}")
+                if updated_shape != original_shape:
+                    print(f"Warning: Data shape changed from {original_shape} to {updated_shape} which may not be compatible with the model")
+                return True
         return False
+
+
+
 
 def get_app():
     app = MLTrainingServingApp()

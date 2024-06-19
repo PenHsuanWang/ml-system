@@ -326,6 +326,25 @@ def run_ml_training(
     return {"message": "Run ML training successfully"}
 
 
+@router.get("/ml_training_manager/get_data_processor/{data_processor_id}")
+def get_data_processor(data_processor_id: str, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
+    """
+    Get data processor by ID
+    :param data_processor_id: Data processor ID
+    :param ml_trainer_app: MLTrainingServingApp
+    :return: JSONResponse
+    """
+    data_processor = ml_trainer_app.get_data_processor(data_processor_id)
+    if data_processor:
+        # Log the data processor details for debugging
+        print(f"Retrieved data processor {data_processor_id}: {data_processor}")
+        return {"data_processor": str(data_processor)}
+    return JSONResponse(
+        status_code=404,
+        content={"message": "Data processor not found"}
+    )
+
+
 @router.get("/ml_training_manager/get_trainer/{trainer_id}")
 def get_trainer(
         trainer_id: str,

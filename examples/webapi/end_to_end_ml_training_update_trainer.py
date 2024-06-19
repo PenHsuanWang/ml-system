@@ -110,6 +110,12 @@ def example_update_data_processor(data_processor_id, new_params):
         {"params": new_params}
     )
     print(response)
+    # Verify data processor shape after update
+    try:
+        data_processor_info = get_request(f"ml_training_manager/get_data_processor/{data_processor_id}")
+        print(f"Updated data processor info: {data_processor_info}")
+    except Exception as e:
+        print(f"Failed to retrieve updated data processor: {e}")
 
 def main():
     TRAINING_WINDOW_SIZE = 60
@@ -205,6 +211,9 @@ def main():
 
     # Step 15: List data processors again to confirm the update
     example_list_data_processors()
+
+    # Step 16: Retrain using the updated trainer without re-initializing
+    example_run_ml_training(epochs=10)
 
 if __name__ == "__main__":
     main()

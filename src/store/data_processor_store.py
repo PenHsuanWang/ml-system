@@ -50,11 +50,7 @@ class DataProcessStore:
         :param data_processor_id: provided by register
         :return: the data processor object
         """
-        try:
-            return cls._data_processor_store[data_processor_id]
-        except KeyError:
-            # Handle the case when the ID is not found
-            return None
+        return cls._data_processor_store.get(data_processor_id, None)
 
     @classmethod
     def remove_data_processor(cls, data_processor_id: str) -> bool:
