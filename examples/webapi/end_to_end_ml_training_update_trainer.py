@@ -94,6 +94,7 @@ def example_update_model(model_id, new_params):
         {"params": new_params}
     )
     print(response)
+    print("Updated model configuration:", response.get("updated_model"))
 
 # Update trainer
 def example_update_trainer(trainer_id, new_params):
@@ -102,6 +103,7 @@ def example_update_trainer(trainer_id, new_params):
         {"params": new_params}
     )
     print(response)
+    print("Updated model configuration:", response.get("updated_trainer"))
 
 # Update data processor
 def example_update_data_processor(data_processor_id, new_params):
@@ -130,7 +132,7 @@ def main():
     example_set_mlflow_settings(MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD)
 
     # Step 1: Read local CSV file and convert to DataFrame
-    csv_file_path = "/home/pwang/pwang-dev/ml-system/AAPL.csv"
+    csv_file_path = "/Users/pwang/Developer/yfinance-stock-analyzer-lstm/data/raw_data/AAPL.csv"
     df = pd.read_csv(csv_file_path)
     dataframe_payload = {
         "data": df.to_dict(orient="records"),

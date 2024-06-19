@@ -422,40 +422,43 @@ def list_data_processors(ml_trainer_app: MLTrainingServingApp = Depends(get_app)
 @router.put("/ml_training_manager/update_model/{model_id}")
 def update_model(model_id: str, update_params: UpdateModelParams, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
     """
-    Update model parameters
+    Update model parameters and return the updated configuration.
     :param ml_trainer_app: MLTrainingServingApp
     :param model_id: ID of the model to update
     :param update_params: New parameters for the model
     :return: JSONResponse
     """
     if ml_trainer_app.update_model(model_id, update_params.params):
-        return {"message": f"Model {model_id} updated successfully"}
+        updated_model = ml_trainer_app.get_model(model_id)
+        return {"message": f"Model {model_id} updated successfully", "updated_model": str(updated_model)}
     return JSONResponse(status_code=422, content={"message": f"Failed to update model {model_id}"})
 
 
 @router.put("/ml_training_manager/update_trainer/{trainer_id}")
 def update_trainer(trainer_id: str, update_params: UpdateTrainerParams, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
     """
-    Update trainer parameters
+    Update trainer parameters and return the updated configuration.
     :param ml_trainer_app: MLTrainingServingApp
     :param trainer_id: ID of the trainer to update
     :param update_params: New parameters for the trainer
     :return: JSONResponse
     """
     if ml_trainer_app.update_trainer(trainer_id, update_params.params):
-        return {"message": f"Trainer {trainer_id} updated successfully"}
+        updated_trainer = ml_trainer_app.get_trainer(trainer_id)
+        return {"message": f"Trainer {trainer_id} updated successfully", "updated_trainer": str(updated_trainer)}
     return JSONResponse(status_code=422, content={"message": f"Failed to update trainer {trainer_id}"})
 
 
 @router.put("/ml_training_manager/update_data_processor/{data_processor_id}")
 def update_data_processor(data_processor_id: str, update_params: UpdateDataProcessorParams, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
     """
-    Update data processor parameters
+    Update data processor parameters and return the updated configuration.
     :param ml_trainer_app: MLTrainingServingApp
     :param data_processor_id: ID of the data processor to update
     :param update_params: New parameters for the data processor
     :return: JSONResponse
     """
     if ml_trainer_app.update_data_processor(data_processor_id, update_params.params):
-        return {"message": f"Data Processor {data_processor_id} updated successfully"}
+        updated_data_processor = ml_trainer_app.get_data_processor(data_processor_id)
+        return {"message": f"Data Processor {data_processor_id} updated successfully", "updated_data_processor": str(updated_data_processor)}
     return JSONResponse(status_code=422, content={"message": f"Failed to update data processor {data_processor_id}"})
