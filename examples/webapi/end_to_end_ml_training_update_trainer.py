@@ -75,7 +75,30 @@ def example_get_mlflow_models():
 # Get MLflow model details
 def example_get_mlflow_model_details(model_id):
     response = get_request(f"ml_training_manager/get_model/{model_id}")
+    print("Model Details:")
     print(response)
+    parameters = response.get("parameters", {})
+    print("Model Parameters:")
+    for param, value in parameters.items():
+        print(f"  {param}: {value}")
+
+def example_get_trainer(trainer_id):
+    response = get_request(f"ml_training_manager/get_trainer/{trainer_id}")
+    print("Trainer Details:")
+    print(response)
+    parameters = response.get("parameters", {})
+    print("Trainer Parameters:")
+    for param, value in parameters.items():
+        print(f"  {param}: {value}")
+
+def example_get_data_processor(data_processor_id):
+    response = get_request(f"ml_training_manager/get_data_processor/{data_processor_id}")
+    print("Data Processor Details:")
+    print(response)
+    parameters = response.get("parameters", {})
+    print("Data Processor Parameters:")
+    for param, value in parameters.items():
+        print(f"  {param}: {value}")
 
 # List trainers
 def example_list_trainers():
@@ -140,7 +163,7 @@ def main():
     }
 
     # Step 2: Initialize the data processor from the DataFrame
-    init_data_processor_response = post_request("ml_training_manager/init_data_preprocessor_from_df", {
+    init_data_processor_response = post_request("ml_training_manager/init_data_processor_from_df", {
         "data_processor_id": "example_data_processor_id",
         "data_processor_type": "time_series",
         "dataframe": dataframe_payload,
@@ -202,8 +225,10 @@ def main():
     # Step 11: List data processors
     example_list_data_processors()
 
-    # Step 12: Update model
-    example_update_model("unique_model_id", {"hidden_size": 256})
+    # Step 12: Get details of a specific model, trainer, and data processor
+    example_get_mlflow_model_details("unique_model_id")
+    example_get_trainer("unique_trainer_id")
+    example_get_data_processor("example_data_processor_id")
 
     # Step 13: Update trainer
     example_update_trainer("unique_trainer_id", {"learning_rate": 0.002})

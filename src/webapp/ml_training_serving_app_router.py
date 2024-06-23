@@ -129,7 +129,7 @@ def fetch_data_from_source(
     return {"message": f"Fetched data successfully"}
 
 
-@router.post("/ml_training_manager/init_data_preprocessor_from_df")
+@router.post("/ml_training_manager/init_data_processor_from_df")
 def init_data_preprocessor_from_df(
         request: InitDataProcessorFromDFBody = Body(...),
         ml_trainer_app: MLTrainingServingApp = Depends(get_app)
