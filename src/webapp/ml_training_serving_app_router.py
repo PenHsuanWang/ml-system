@@ -336,13 +336,21 @@ def get_data_processor(data_processor_id: str, ml_trainer_app: MLTrainingServing
     """
     data_processor = ml_trainer_app.get_data_processor(data_processor_id)
     if data_processor:
-        # Log the data processor details for debugging
-        print(f"Retrieved data processor {data_processor_id}: {data_processor}")
-        return {"data_processor": str(data_processor)}
+        # Ensure all necessary attributes exist on the data processor object
+        data_processor_details = {
+            "id": data_processor_id,
+            "data_processor_type": data_processor.__class__.__name__,
+            "extract_column": getattr(data_processor, 'extract_column', []),
+            "training_data_ratio": getattr(data_processor, 'training_data_ratio', 0.6),
+            "training_window_size": getattr(data_processor, 'training_window_size', 60),
+            "target_window_size": getattr(data_processor, 'target_window_size', 1)
+        }
+        return {"data_processor": data_processor_details}
     return JSONResponse(
         status_code=404,
         content={"message": "Data processor not found"}
     )
+
 
 
 @router.get("/ml_training_manager/get_trainer/{trainer_id}")
