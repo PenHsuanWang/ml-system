@@ -1,9 +1,12 @@
 import threading
+from typing import Optional
+from src.ml_core.data_processor.base_data_processor import BaseDataProcessor
+from src.ml_core.data_processor.time_series_data_processor import TimeSeriesDataProcessor
 
 class DataProcessStore:
     """
-    the data process store is a central store across the ml system, it is designed in singleton pattern
-    to store the data processor object which created, and operated during the ml system process
+    The data process store is a central store across the ML system, it is designed in singleton pattern
+    to store the data processor object which created, and operated during the ML system process
     """
     _app = None
     _app_lock = threading.Lock()
@@ -11,7 +14,7 @@ class DataProcessStore:
 
     def __new__(cls, *args, **kwargs):
         """
-        define singleton pattern to get the app instance, provide thread safe
+        Define singleton pattern to get the app instance, provide thread safety
         :param args:
         :param kwargs:
         :return:
@@ -24,58 +27,61 @@ class DataProcessStore:
     @classmethod
     def _is_data_process_exist(cls, data_processor_id: str) -> bool:
         """
-        check if the data processor object is exist in the data processor store
+        Check if the data processor object exists in the data processor store
         :param data_processor_id: provided by register
-        :return: True if exist, False if not exist
+        :return: True if exists, False if not exist
         """
         return data_processor_id in cls._data_processor_store.keys()
 
     @classmethod
-    def add_data_processor(cls, data_processor_id: str, data_processor: object) -> bool:
+    def add_data_processor(cls, data_processor_id: str, data_processor: BaseDataProcessor) -> bool:
         """
-        add the data processor object to the data processor store
+        Add the data processor object to the data processor store
         :param data_processor_id: provided by register
         :param data_processor: the data processor object
         :return:
         """
         if cls._is_data_process_exist(data_processor_id):
             return False
-        cls._data_processor_store[data_processor_id] = data_processor
+        cls._data_processor_store[data_processor_id] = data_processor.to_dict()
         return True
 
     @classmethod
-    def get_data_processor(cls, data_processor_id: str) -> object:
+    def get_data_processor(cls, data_processor_id: str) -> Optional[BaseDataProcessor]:
         """
-        get the data processor object from the data processor store
+        Get the data processor object from the data processor store
         :param data_processor_id: provided by register
-        :return: the data processor object
+        :return: the data processor object or None if not found
         """
-        return cls._data_processor_store.get(data_processor_id, None)
+        data_processor_dict = cls._data_processor_store.get(data_processor_id, None)
+        if data_processor_dict:
+            processor_type = data_processor_dict.get('type')
+            if processor_type == 'TimeSeriesDataProcessor':
+                return TimeSeriesDataProcessor.from_dict(data_processor_dict)
+        return None
 
     @classmethod
     def remove_data_processor(cls, data_processor_id: str) -> bool:
         """
-        remove the data processor object from the data processor store
+        Remove the data processor object from the data processor store
         :param data_processor_id: provided by register
         :return: True if remove success, False if not
         """
         if cls._is_data_process_exist(data_processor_id):
             del cls._data_processor_store[data_processor_id]
             return True
-        else:
-            return False
+        return False
 
     @classmethod
-    def update_data_processor(cls, data_processor_id: str, new_data_processor: object) -> bool:
+    def update_data_processor(cls, data_processor_id: str, new_data_processor: BaseDataProcessor) -> bool:
         if cls._is_data_process_exist(data_processor_id):
-            cls._data_processor_store[data_processor_id] = new_data_processor
+            cls._data_processor_store[data_processor_id] = new_data_processor.to_dict()
             return True
         return False
 
 def get_store():
     """
-    get the data process manager object in singleton pattern
+    Get the data process manager object in singleton pattern
     :return: the data process manager object
     """
     return DataProcessStore()
-

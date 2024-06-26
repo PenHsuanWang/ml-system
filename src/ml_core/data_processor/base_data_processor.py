@@ -3,23 +3,17 @@ import pandas as pd
 import numpy as np
 
 
-# An abstraction class for data processor
-# Which designed fulfill different type of pytorch model
-# Converting raw pandas dataframe to pytorch input tensor
-
-
 class BaseDataProcessor(ABC):
     """
-    Abstract base class for all data processor.
+    Abstract base class for all data processors.
     """
 
     def __init__(self, input_data):
         """
-        The data processor is to component designed as a operator to provide data transformation.
-        The input data is a pandas dataframe. and the output data after desired transformation is a numpy array.
+        The data processor is designed as an operator to provide data transformation.
+        The input data is a pandas dataframe, and the output data after desired transformation is a numpy array.
         :param input_data: the input data is a pandas dataframe.
         """
-        # if input data is not provided, set it to None in initialization stage is okey, but must be provided later.
         self._input_df = input_data
         self._training_data_x = None
         self._training_target_y = None
@@ -38,7 +32,6 @@ class BaseDataProcessor(ABC):
             print("Data has already been preprocessed. Skipping preprocessing.")
             return
 
-        # check if input data is provided, or raise an process error
         if self._input_df is None:
             raise RuntimeError("Input data is not provided.")
 
@@ -61,31 +54,56 @@ class BaseDataProcessor(ABC):
 
     def get_training_data_x(self) -> np.ndarray:
         """
-        get the training data x in numpy array format.
+        Get the training data x in numpy array format.
         :return:
         """
         return self._training_data_x
 
     def get_training_target_y(self) -> np.ndarray:
         """
-        get the training target y in numpy array format.
+        Get the training target y in numpy array format.
         :return:
         """
         return self._training_target_y
 
     def get_testing_data_x(self) -> np.ndarray:
         """
-        get the testing data x in numpy array format.
-        the testing data size could be zero.
+        Get the testing data x in numpy array format.
+        The testing data size could be zero.
         :return:
         """
         return self._testing_data_x
 
     def get_testing_target_y(self) -> np.ndarray:
         """
-        get the testing target y in numpy array format.
-        the testing data size could be zero.
+        Get the testing target y in numpy array format.
+        The testing data size could be zero.
         :return:
         """
         return self._testing_target_y
 
+    def to_dict(self):
+        """
+        Serialize the BaseDataProcessor object to a dictionary.
+        """
+        return {
+            '_input_df': self._input_df.to_dict() if self._input_df is not None else None,
+            '_training_data_x': self._training_data_x.tolist() if self._training_data_x is not None else None,
+            '_training_target_y': self._training_target_y.tolist() if self._training_target_y is not None else None,
+            '_testing_data_x': self._testing_data_x.tolist() if self._testing_data_x is not None else None,
+            '_testing_target_y': self._testing_target_y.tolist() if self._testing_target_y is not None else None,
+            '_is_preprocessed': self._is_preprocessed
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """
+        Deserialize a dictionary to a BaseDataProcessor object.
+        """
+        obj = cls(input_data=pd.DataFrame(data['_input_df']) if data['_input_df'] is not None else None)
+        obj._training_data_x = np.array(data['_training_data_x']) if data['_training_data_x'] is not None else None
+        obj._training_target_y = np.array(data['_training_target_y']) if data['_training_target_y'] is not None else None
+        obj._testing_data_x = np.array(data['_testing_data_x']) if data['_testing_data_x'] is not None else None
+        obj._testing_target_y = np.array(data['_testing_target_y']) if data['_testing_target_y'] is not None else None
+        obj._is_preprocessed = data['_is_preprocessed']
+        return obj

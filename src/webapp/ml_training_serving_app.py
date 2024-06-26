@@ -15,6 +15,7 @@ from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFact
 from src.ml_core.trainer.trainer import TrainerFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent, NullMLFlowAgent
 
+
 class MLTrainingServingApp:
     """
     A singleton class to serve the model training process
@@ -85,7 +86,8 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_data_processor_from_df(cls, data_processor_id: str, data_processor_type: str, dataframe_json: dict, **kwargs) -> bool:
+    def init_data_processor_from_df(cls, data_processor_id: str, data_processor_type: str, dataframe_json: dict,
+                                    **kwargs) -> bool:
         """
         Initialize the data processor from a JSON-encoded DataFrame.
         :param data_processor_id: The ID of the data processor to initialize
@@ -97,15 +99,19 @@ class MLTrainingServingApp:
         try:
             dataframe = pd.DataFrame.from_records(dataframe_json["data"], columns=dataframe_json["columns"])
             cls._raw_pandas_dataframe = dataframe
+            print(f"DataFrame initialized: {dataframe.head()}")
+            print(f"Received kwargs: {kwargs}")
             cls._data_processor = DataProcessorFactory.create_data_processor(
                 data_processor_type,
                 input_data=cls._raw_pandas_dataframe,
                 **kwargs
             )
+            print(f"Created data processor: {cls._data_processor}")
             cls._data_processor_store.add_data_processor(
                 data_processor_id=data_processor_id,
                 data_processor=cls._data_processor
             )
+            print(f"Data processor stored with ID: {data_processor_id} and details: {cls._data_processor}")
         except Exception as e:
             print("Failed to init data processor from DataFrame")
             print(e)
@@ -114,7 +120,8 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def init_data_processor(cls, data_processor_id: str, data_processor_type: str, dataframe: pd.DataFrame = None, **kwargs) -> bool:
+    def init_data_processor(cls, data_processor_id: str, data_processor_type: str, dataframe: pd.DataFrame = None,
+                            **kwargs) -> bool:
         """
         Design for an exposed REST api to let client init the data preprocessor
         To initialize the data preprocessor
@@ -394,7 +401,7 @@ class MLTrainingServingApp:
         if data_processor:
             for param, value in data_processor_params.items():
                 setattr(data_processor, param, value)
-            
+
             # Ensure data shape is consistent with model input
             original_shape = data_processor.get_training_data_x().shape
             if cls._data_processor_store.update_data_processor(data_processor_id, data_processor):
@@ -403,11 +410,10 @@ class MLTrainingServingApp:
                 print(f"Original training data shape: {original_shape}")
                 print(f"Updated training data shape: {updated_shape}")
                 if updated_shape != original_shape:
-                    print(f"Warning: Data shape changed from {original_shape} to {updated_shape} which may not be compatible with the model")
+                    print(
+                        f"Warning: Data shape changed from {original_shape} to {updated_shape} which may not be compatible with the model")
                 return True
         return False
-
-
 
 
 def get_app():

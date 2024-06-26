@@ -130,7 +130,7 @@ def fetch_data_from_source(
 
 
 @router.post("/ml_training_manager/init_data_processor_from_df")
-def init_data_preprocessor_from_df(
+def init_data_processor_from_df(
         request: InitDataProcessorFromDFBody = Body(...),
         ml_trainer_app: MLTrainingServingApp = Depends(get_app)
 ):
@@ -340,17 +340,18 @@ def get_data_processor(data_processor_id: str, ml_trainer_app: MLTrainingServing
         data_processor_details = {
             "id": data_processor_id,
             "data_processor_type": data_processor.__class__.__name__,
-            "extract_column": getattr(data_processor, 'extract_column', []),
-            "training_data_ratio": getattr(data_processor, 'training_data_ratio', 0.6),
-            "training_window_size": getattr(data_processor, 'training_window_size', 60),
-            "target_window_size": getattr(data_processor, 'target_window_size', 1)
+            "extract_column": getattr(data_processor, '_extract_column', []),
+            "training_data_ratio": getattr(data_processor, '_training_data_ratio', 0.6),
+            "training_window_size": getattr(data_processor, '_training_window_size', 60),
+            "target_window_size": getattr(data_processor, '_target_window_size', 1)
         }
+        print(f"Retrieved data processor: {data_processor_details}")
         return {"data_processor": data_processor_details}
+    print(f"Data processor with ID {data_processor_id} not found")
     return JSONResponse(
         status_code=404,
         content={"message": "Data processor not found"}
     )
-
 
 
 @router.get("/ml_training_manager/get_trainer/{trainer_id}")
