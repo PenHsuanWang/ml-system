@@ -8,6 +8,7 @@ from webapp import ml_training_serving_app_router
 from webapp import stock_price_analyzer_serving_app_route
 from webapp import mlflow_model_download_serving_app_route
 from webapp import ml_inference_serving_app_router
+from webapp import mlflow_models_serving_app_router
 
 
 origins = [
@@ -22,7 +23,7 @@ app.include_router(ml_training_serving_app_router.router)
 app.include_router(stock_price_analyzer_serving_app_route.router)
 app.include_router(mlflow_model_download_serving_app_route.router)
 app.include_router(ml_inference_serving_app_router.router)
-
+app.include_router(mlflow_models_serving_app_router.router)
 
 app.add_middleware(
     CORSMiddleware,
