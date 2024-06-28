@@ -1,10 +1,7 @@
 import pandas as pd
 import numpy as np
-import torch
-
-from src.ml_core.data_processor.base_data_processor import BaseDataProcessor
 from sklearn.preprocessing import MinMaxScaler
-
+from src.ml_core.data_processor.base_data_processor import BaseDataProcessor
 
 class TimeSeriesDataProcessor(BaseDataProcessor):
     """
@@ -48,6 +45,44 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
         self._training_window_size = training_window_size
         self._target_window_size = target_window_size
+
+    def to_dict(self):
+        """
+        Serialize the TimeSeriesDataProcessor object to a dictionary.
+        """
+        return {
+            'type': 'TimeSeriesDataProcessor',
+            'extract_column': self._extract_column,
+            'training_data_ratio': self._training_data_ratio,
+            'training_window_size': self._training_window_size,
+            'target_window_size': self._target_window_size,
+            # Add any other relevant attributes here
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """
+        Deserialize a dictionary to a TimeSeriesDataProcessor object.
+        """
+        return cls(
+            extract_column=data.get('extract_column', []),
+            training_data_ratio=data.get('training_data_ratio', 0.8),
+            training_window_size=data.get('training_window_size', 60),
+            target_window_size=data.get('target_window_size', 1),
+            input_data=None  # Set input_data to None or handle as needed
+        )
+
+    def __repr__(self):
+        return (f"TimeSeriesDataProcessor("
+                f"extract_column={self._extract_column}, "
+                f"training_data_ratio={self._training_data_ratio}, "
+                f"training_window_size={self._training_window_size}, "
+                f"target_window_size={self._target_window_size})")
+
+    def __str__(self):
+        return self.__repr__()
+
+    # Other methods remain unchanged
 
     def _scaling_array(self):
         """
