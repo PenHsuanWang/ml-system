@@ -9,9 +9,9 @@ class TorchNeuralNetworkModelFactory:
     @staticmethod
     def create_torch_nn_model(model_type: str, **kwargs):
         """
-        create a torch neural network models instance
-        :param model_type: models type
-        :return: torch neural network models instance
+        Create a torch neural network models instance
+        :param model_type: Model type
+        :return: Torch neural network models instance
         """
         if model_type == "lstm":
             return LSTMModel(**kwargs)
