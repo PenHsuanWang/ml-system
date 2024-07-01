@@ -4,10 +4,11 @@ Developing the serving app to export model training setting to REST api endpoint
 
 import os
 
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
+from requests import HTTPError
 
 from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
 
@@ -48,8 +49,8 @@ class InitDataProcessorBody(BaseModel):
 
 class InitModelBody(BaseModel):
     model_type: str
-    model_id: str
-    kwargs: dict
+    model_name: str
+    kwargs: Dict[str, Any]
 
 
 class InitTrainerBody(BaseModel):
@@ -198,16 +199,18 @@ def init_model(
     :return: JSONResponse
     """
     model_type = request.model_type
-    model_id = request.model_id
+    model_name = request.model_name
     kwargs = request.kwargs
 
-    if not ml_trainer_app.init_model(model_type, model_id, **kwargs):
+    print(f"Received request with model_type: {model_type}, model_name: {model_name}, kwargs: {kwargs}")
+
+    if not ml_trainer_app.init_model(model_type, model_name, **kwargs):
         return JSONResponse(
             status_code=422,
             content={"message": "Failed to initialize model"}
         )
 
-    return {"message": f"Init model successfully"}
+    return {"message": "Init model successfully"}
 
 
 @router.post("/ml_training_manager/init_trainer")
@@ -459,7 +462,11 @@ def update_trainer(trainer_id: str, update_params: UpdateTrainerParams, ml_train
 
 
 @router.put("/ml_training_manager/update_data_processor/{data_processor_id}")
-def update_data_processor(data_processor_id: str, update_params: UpdateDataProcessorParams, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
+def update_data_processor(
+    data_processor_id: str,
+    update_params: dict,
+    ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
     """
     Update data processor parameters and return the updated configuration.
     :param ml_trainer_app: MLTrainingServingApp
@@ -467,7 +474,13 @@ def update_data_processor(data_processor_id: str, update_params: UpdateDataProce
     :param update_params: New parameters for the data processor
     :return: JSONResponse
     """
-    if ml_trainer_app.update_data_processor(data_processor_id, update_params.params):
-        updated_data_processor = ml_trainer_app.get_data_processor(data_processor_id)
-        return {"message": f"Data Processor {data_processor_id} updated successfully", "updated_data_processor": str(updated_data_processor)}
-    return JSONResponse(status_code=422, content={"message": f"Failed to update data processor {data_processor_id}"})
+    try:
+        success = ml_trainer_app.update_data_processor(data_processor_id, update_params)
+        return {
+            "message": f"Data processor {data_processor_id} updated successfully",
+            "updated_data_processor": ml_trainer_app.data_processor_store.get_data_processor(data_processor_id)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
