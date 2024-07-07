@@ -176,13 +176,13 @@ def main():
     })
     print(init_data_processor_response)
 
-    # Step 3: Initialize the model
+    # Step 3: Initialize the model with multiple LSTM layers
     init_model_response = post_request("ml_training_manager/init_model", {
         "model_type": "lstm",
         "model_id": "unique_model_id",  # Ensure model_id is included
         "kwargs": {
             "input_size": 2,
-            "hidden_size": 128,
+            "hidden_layer_sizes": [128, 64, 32],  # Specify multiple hidden layers
             "output_size": 1
         }
     })

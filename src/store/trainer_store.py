@@ -1,3 +1,4 @@
+# src/store/trainer_store.py
 import threading
 
 class TrainerStore:
@@ -43,6 +44,13 @@ class TrainerStore:
             cls._trainer_store[trainer_id] = new_trainer
             return True
         return False
+
+    @classmethod
+    def get_trainer_details(cls, trainer_id: str) -> dict:
+        trainer = cls.get_trainer(trainer_id)
+        if trainer:
+            return trainer.to_dict()
+        return None
 
 def get_trainer_store():
     return TrainerStore()
