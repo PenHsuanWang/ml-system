@@ -1,5 +1,4 @@
 import os
-import threading
 import mlflow
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -287,11 +286,12 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def run_ml_training(cls, epochs: int) -> bool:
+    def run_ml_training(cls, epochs: int, progress_callback=None) -> bool:
         """
         Once the data fetcher prepared and trainer is initialized
         Run the ml training process
         :param epochs: training epochs
+        :param progress_callback: callback function for progress updates
         :return: True if training is successful
         """
         # Check the data processor is ready
@@ -329,7 +329,7 @@ class MLTrainingServingApp:
 
         try:
             print(f"Training the model for {epochs} epochs")
-            cls._trainer.run_training_loop(epochs)
+            cls._trainer.run_training_loop(epochs, progress_callback=progress_callback)
             print("Training finished")
         except RuntimeError as re:
             print(f"RuntimeError during training: {re}")

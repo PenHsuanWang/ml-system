@@ -4,18 +4,18 @@ Developing the serving app to export model training setting to REST api endpoint
 
 import os
 
-from fastapi import APIRouter, Depends, Body, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Body, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
-from requests import HTTPError
-
 from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
+import json
 
 # Definition of FastAPI router
 router = APIRouter()
 
 # Define the pydantic model for request body
+
 
 class SetDataFetcherBody(BaseModel):
     data_fetcher_name: str
@@ -304,29 +304,42 @@ def set_mlflow_run_name(
 
 
 @router.post("/ml_training_manager/run_ml_training")
-def run_ml_training(
+async def run_ml_training(
         request: RunMLTrainingBody = Body(...),
-        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app),
+        background_tasks: BackgroundTasks = None
 ):
     """
     Run ml training
-    :param ml_trainer_app:
+    :param ml_trainer_app: MLTrainingServingApp
     :param request: RunMLTrainingBody
+    :param background_tasks: FastAPI BackgroundTasks for real-time updates
     :return: JSONResponse
     """
     print(f"Received run_ml_training request: {request}")
 
     epochs = request.kwargs["epochs"]
 
-    if not ml_trainer_app.run_ml_training(epochs):
-        print("run_ml_training failed.")
-        return JSONResponse(
-            status_code=422,
-            content={"message": "Failed to run ML training"}
-        )
+    def progress_callback(epoch, total_epochs, loss):
+        update = {
+            "epoch": epoch,
+            "total_epochs": total_epochs,
+            "loss": loss
+        }
+        yield f"data: {json.dumps(update)}\n\n"
 
-    print("run_ml_training succeeded.")
-    return {"message": "Run ML training successfully"}
+    async def training_task():
+        if not ml_trainer_app.run_ml_training(epochs, progress_callback=progress_callback):
+            print("run_ml_training failed.")
+            return JSONResponse(
+                status_code=422,
+                content={"message": "Failed to run ML training"}
+            )
+        print("run_ml_training succeeded.")
+        return StreamingResponse(progress_callback(), media_type="text/event-stream")
+
+    background_tasks.add_task(training_task)
+    return {"message": "ML training started in background"}
 
 
 @router.get("/ml_training_manager/get_data_processor/{data_processor_id}")

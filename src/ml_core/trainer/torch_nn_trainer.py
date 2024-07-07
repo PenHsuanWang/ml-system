@@ -1,6 +1,9 @@
+# src/ml_core/trainers/torch_nn_trainer.py
+import time
 from torch.utils.data.dataloader import DataLoader
 from src.ml_core.trainer.base_trainer import BaseTrainer
 from src.model_ops_manager.mlflow_agent.mlflow_agent import NullMLFlowAgent
+
 
 class TorchNeuralNetworkTrainer(BaseTrainer):
     """
@@ -102,10 +105,11 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         }
         self._mlflow_agent.log_params_many(training_data_info)
 
-    def run_training_loop(self, epochs: int) -> None:
+    def run_training_loop(self, epochs: int, progress_callback=None) -> None:
         """
         Implement the training logic and the process pipeline
         :param epochs: The number of epochs to train the model
+        :param progress_callback: Optional callback to provide real-time updates
         :return: None
         """
         # Check if the model and training data are ready
@@ -131,6 +135,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
 
         try:
             for epoch in range(epochs):
+                epoch_loss = 0
                 for i, data in enumerate(self._training_data_loader):
                     x, y = data
                     x = x.to(self._device)
@@ -145,11 +150,19 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
                     loss.backward()
                     self._optimizer.step()
 
+                    epoch_loss += loss.item()
+
                     if self._track_metrics:
                         # Log loss metric
                         self._mlflow_agent.log_metric("loss", loss.item(), step=epoch)
 
-                    print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item()}")
+                avg_epoch_loss = epoch_loss / len(self._training_data_loader)
+
+                print(f"Epoch: {epoch+1}/{epochs}, Loss: {avg_epoch_loss}")
+
+                # Callback for progress update
+                if progress_callback:
+                    progress_callback(epoch + 1, epochs, avg_epoch_loss)
 
             if self._track_model_architecture:
                 # Log model architecture
@@ -164,4 +177,3 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         finally:
             self._mlflow_agent.end_run()
             print("Training run ended.")
-
