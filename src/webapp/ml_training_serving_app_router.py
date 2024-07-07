@@ -7,7 +7,7 @@ import os
 from fastapi import APIRouter, Depends, Body, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
 import json
 
@@ -56,7 +56,7 @@ class InitModelBody(BaseModel):
 class InitTrainerBody(BaseModel):
     trainer_type: str
     trainer_id: str
-    kwargs: dict
+    kwargs: Dict[str, Optional[str]]
 
 
 class RunMLTrainingBody(BaseModel):
@@ -224,17 +224,20 @@ def init_trainer(
     :param request: InitTrainerBody
     :return: JSONResponse
     """
-    trainer_type = request.trainer_type
-    trainer_id = request.trainer_id
-    kwargs = request.kwargs
-
-    if not ml_trainer_app.init_trainer(trainer_type, trainer_id, **kwargs):
-        return JSONResponse(
-            status_code=422,
-            content={"message": "Failed to initialize trainer"}
+    print("Going to create trainer")
+    try:
+        print("Received payload:", request)  # Log the incoming payload
+        trainer = ml_trainer_app.init_trainer(
+            trainer_type=request.trainer_type,
+            trainer_id=request.trainer_id,
+            **request.kwargs
         )
-
-    return {"message": f"Init trainer successfully"}
+        if not trainer:
+            raise HTTPException(status_code=422, detail="Trainer initialization failed")
+        return JSONResponse(content={"message": "Trainer initialized successfully"})
+    except Exception as e:
+        print(f"Error initializing trainer: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.post("/ml_training_manager/set_mlflow_model_name")
@@ -383,7 +386,7 @@ def get_trainer(
     """
     trainer = ml_trainer_app.get_trainer(trainer_id)
     if trainer:
-        return {"trainer": str(trainer)}
+        return trainer.to_dict()
     return JSONResponse(
         status_code=404,
         content={"message": "Trainer not found"}

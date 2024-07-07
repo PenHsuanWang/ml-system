@@ -10,21 +10,17 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
     A concrete class for torch neural network models
     """
 
-    def __init__(self, criterion, optimizer, device,
+    def __init__(self, trainer_id, criterion, optimizer, device,
                  model=None,
                  training_data_loader=None,
                  mlflow_agent=NullMLFlowAgent(),
                  track_hyperparameters=True,
                  track_training_data_info=True,
                  track_metrics=True,
-                 track_model_architecture=True
-                 ):
+                 track_model_architecture=True):
         """
         Construction of a pytorch neural network trainer, provide basic information for training
-        the parts of mlflow_agent is using for tracking and registering the model to MLFlow server.
-        The mlflow_agent should be passed by the outer scope, if not, the NullMLFlowAgent will be used.
-        The NullMLFlowAgent is a dummy agent, which will not do anything to let the following training process work
-        without mlflow_agent.
+        :param trainer_id: The unique identifier for the trainer
         :param criterion: The loss function used for training
         :param optimizer: The optimizer used for training
         :param device: The device on which the model will be trained (e.g., 'cpu' or 'cuda')
@@ -37,6 +33,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         :param track_model_architecture: Boolean flag to track model architecture
         """
         super(TorchNeuralNetworkTrainer, self).__init__(model)
+        self._trainer_id = trainer_id
         self._criterion = criterion
         self._optimizer = optimizer
         self._device = device
@@ -49,6 +46,57 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         self._mlflow_model_name = "Pytorch_Model"  # Default model name
         self._mlflow_experiment_name = "ml-system-dev-test"  # Default experiment name
         self._mlflow_run_name = "Pytorch Run"  # Default run name
+
+    def to_dict(self):
+        """
+        Serialize the trainer object to a dictionary.
+        """
+        return {
+            'trainer_id': self._trainer_id,
+            'trainer_type': self.__class__.__name__,
+            'criterion': str(self._criterion),
+            'optimizer': str(self._optimizer),
+            'device': str(self._device),
+            'model': self._model.to_dict() if self._model else None,
+            'training_data_loader': None,  # DataLoader can't be easily serialized; consider handling this separately.
+            'mlflow_agent': self._mlflow_agent.to_dict() if hasattr(self._mlflow_agent, 'to_dict') else None,
+            'track_hyperparameters': self._track_hyperparameters,
+            'track_training_data_info': self._track_training_data_info,
+            'track_metrics': self._track_metrics,
+            'track_model_architecture': self._track_model_architecture,
+            'mlflow_model_name': self._mlflow_model_name,
+            'mlflow_experiment_name': self._mlflow_experiment_name,
+            'mlflow_run_name': self._mlflow_run_name,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """
+        Deserialize a dictionary to a TorchNeuralNetworkTrainer object.
+        """
+        instance = cls(
+            trainer_id=data.get('trainer_id'),
+            criterion=data.get('criterion'),
+            optimizer=data.get('optimizer'),
+            device=data.get('device'),
+            model=None,  # Handle model separately if needed
+            training_data_loader=None,  # Handle DataLoader separately if needed
+            mlflow_agent=None,  # Handle MLFlow agent separately if needed
+            track_hyperparameters=data.get('track_hyperparameters', True),
+            track_training_data_info=data.get('track_training_data_info', True),
+            track_metrics=data.get('track_metrics', True),
+            track_model_architecture=data.get('track_model_architecture', True)
+        )
+        instance._mlflow_model_name = data.get('mlflow_model_name', "Pytorch_Model")
+        instance._mlflow_experiment_name = data.get('mlflow_experiment_name', "ml-system-dev-test")
+        instance._mlflow_run_name = data.get('mlflow_run_name', "Pytorch Run")
+        return instance
+
+    def __repr__(self):
+        return str(self.to_dict())
+
+    def __str__(self):
+        return self.__repr__()
 
     def set_model(self, model):
         """
@@ -177,3 +225,4 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         finally:
             self._mlflow_agent.end_run()
             print("Training run ended.")
+
