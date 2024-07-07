@@ -4,17 +4,18 @@ Developing the serving app to export model training setting to REST api endpoint
 
 import os
 
-from fastapi import APIRouter, Depends, Body
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Body, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
-
+from typing import List, Dict, Any, Optional
 from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
+import json
 
 # Definition of FastAPI router
 router = APIRouter()
 
 # Define the pydantic model for request body
+
 
 class SetDataFetcherBody(BaseModel):
     data_fetcher_name: str
@@ -48,14 +49,14 @@ class InitDataProcessorBody(BaseModel):
 
 class InitModelBody(BaseModel):
     model_type: str
-    model_id: str
-    kwargs: dict
+    model_name: str
+    kwargs: Dict[str, Any]
 
 
 class InitTrainerBody(BaseModel):
     trainer_type: str
     trainer_id: str
-    kwargs: dict
+    kwargs: Dict[str, Optional[str]]
 
 
 class RunMLTrainingBody(BaseModel):
@@ -198,16 +199,18 @@ def init_model(
     :return: JSONResponse
     """
     model_type = request.model_type
-    model_id = request.model_id
+    model_name = request.model_name
     kwargs = request.kwargs
 
-    if not ml_trainer_app.init_model(model_type, model_id, **kwargs):
+    print(f"Received request with model_type: {model_type}, model_name: {model_name}, kwargs: {kwargs}")
+
+    if not ml_trainer_app.init_model(model_type, model_name, **kwargs):
         return JSONResponse(
             status_code=422,
             content={"message": "Failed to initialize model"}
         )
 
-    return {"message": f"Init model successfully"}
+    return {"message": "Init model successfully"}
 
 
 @router.post("/ml_training_manager/init_trainer")
@@ -221,17 +224,20 @@ def init_trainer(
     :param request: InitTrainerBody
     :return: JSONResponse
     """
-    trainer_type = request.trainer_type
-    trainer_id = request.trainer_id
-    kwargs = request.kwargs
-
-    if not ml_trainer_app.init_trainer(trainer_type, trainer_id, **kwargs):
-        return JSONResponse(
-            status_code=422,
-            content={"message": "Failed to initialize trainer"}
+    print("Going to create trainer")
+    try:
+        print("Received payload:", request)  # Log the incoming payload
+        trainer = ml_trainer_app.init_trainer(
+            trainer_type=request.trainer_type,
+            trainer_id=request.trainer_id,
+            **request.kwargs
         )
-
-    return {"message": f"Init trainer successfully"}
+        if not trainer:
+            raise HTTPException(status_code=422, detail="Trainer initialization failed")
+        return JSONResponse(content={"message": "Trainer initialized successfully"})
+    except Exception as e:
+        print(f"Error initializing trainer: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.post("/ml_training_manager/set_mlflow_model_name")
@@ -301,29 +307,42 @@ def set_mlflow_run_name(
 
 
 @router.post("/ml_training_manager/run_ml_training")
-def run_ml_training(
+async def run_ml_training(
         request: RunMLTrainingBody = Body(...),
-        ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+        ml_trainer_app: MLTrainingServingApp = Depends(get_app),
+        background_tasks: BackgroundTasks = None
 ):
     """
     Run ml training
-    :param ml_trainer_app:
+    :param ml_trainer_app: MLTrainingServingApp
     :param request: RunMLTrainingBody
+    :param background_tasks: FastAPI BackgroundTasks for real-time updates
     :return: JSONResponse
     """
     print(f"Received run_ml_training request: {request}")
 
     epochs = request.kwargs["epochs"]
 
-    if not ml_trainer_app.run_ml_training(epochs):
-        print("run_ml_training failed.")
-        return JSONResponse(
-            status_code=422,
-            content={"message": "Failed to run ML training"}
-        )
+    def progress_callback(epoch, total_epochs, loss):
+        update = {
+            "epoch": epoch,
+            "total_epochs": total_epochs,
+            "loss": loss
+        }
+        yield f"data: {json.dumps(update)}\n\n"
 
-    print("run_ml_training succeeded.")
-    return {"message": "Run ML training successfully"}
+    async def training_task():
+        if not ml_trainer_app.run_ml_training(epochs, progress_callback=progress_callback):
+            print("run_ml_training failed.")
+            return JSONResponse(
+                status_code=422,
+                content={"message": "Failed to run ML training"}
+            )
+        print("run_ml_training succeeded.")
+        return StreamingResponse(progress_callback(), media_type="text/event-stream")
+
+    background_tasks.add_task(training_task)
+    return {"message": "ML training started in background"}
 
 
 @router.get("/ml_training_manager/get_data_processor/{data_processor_id}")
@@ -367,7 +386,7 @@ def get_trainer(
     """
     trainer = ml_trainer_app.get_trainer(trainer_id)
     if trainer:
-        return {"trainer": str(trainer)}
+        return trainer.to_dict()
     return JSONResponse(
         status_code=404,
         content={"message": "Trainer not found"}
@@ -459,7 +478,11 @@ def update_trainer(trainer_id: str, update_params: UpdateTrainerParams, ml_train
 
 
 @router.put("/ml_training_manager/update_data_processor/{data_processor_id}")
-def update_data_processor(data_processor_id: str, update_params: UpdateDataProcessorParams, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
+def update_data_processor(
+    data_processor_id: str,
+    update_params: dict,
+    ml_trainer_app: MLTrainingServingApp = Depends(get_app)
+):
     """
     Update data processor parameters and return the updated configuration.
     :param ml_trainer_app: MLTrainingServingApp
@@ -467,7 +490,13 @@ def update_data_processor(data_processor_id: str, update_params: UpdateDataProce
     :param update_params: New parameters for the data processor
     :return: JSONResponse
     """
-    if ml_trainer_app.update_data_processor(data_processor_id, update_params.params):
-        updated_data_processor = ml_trainer_app.get_data_processor(data_processor_id)
-        return {"message": f"Data Processor {data_processor_id} updated successfully", "updated_data_processor": str(updated_data_processor)}
-    return JSONResponse(status_code=422, content={"message": f"Failed to update data processor {data_processor_id}"})
+    try:
+        success = ml_trainer_app.update_data_processor(data_processor_id, update_params)
+        return {
+            "message": f"Data processor {data_processor_id} updated successfully",
+            "updated_data_processor": ml_trainer_app.data_processor_store.get_data_processor(data_processor_id)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

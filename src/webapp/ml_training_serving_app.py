@@ -1,5 +1,4 @@
 import os
-import threading
 import mlflow
 import torch
 from torch.utils.data.dataloader import DataLoader
@@ -192,11 +191,7 @@ class MLTrainingServingApp:
     @classmethod
     def init_trainer(cls, trainer_type: str, trainer_id: str, **kwargs) -> bool:
         """
-        Design for an exposed REST api to let client init the trainer
-        To initialize the trainer
-        Initialize parameters from kwargs provided by client via REST api request body.
-        The trainer provides the function to add mlflow agent to log the training process and register the model
-        create mlflow agent and setting the tracking uri here.
+        Initialize the trainer
         :param trainer_type: The type of trainer to initialize
         :param trainer_id: The ID to associate with the trainer in the store
         :param kwargs: Additional parameters for the trainer
@@ -206,41 +201,51 @@ class MLTrainingServingApp:
             print("Model is not initialized")
             return False
 
+        # Initialize criterion
         criterion = None
-        if kwargs["loss_function"] == "mse":
+        if kwargs.get("loss_function") == "mse":
             criterion = torch.nn.MSELoss()
+        else:
+            print("Unsupported loss function")
+            return False
 
+        # Initialize optimizer
         optimizer = None
-        if kwargs["optimizer"] == "adam":
-            optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs["learning_rate"]))
+        if kwargs.get("optimizer") == "adam":
+            optimizer = torch.optim.Adam(cls._model.parameters(), lr=float(kwargs.get("learning_rate", 0.001)))
+        else:
+            print("Unsupported optimizer")
+            return False
 
-        # Extract the mlflow environment variables from kwargs
+        # Extract mlflow environment variables from kwargs
         mlflow_agent = NullMLFlowAgent()
-        try:
-            mlflow_tracking_username = kwargs["mlflow_tracking_username"]
-            mlflow_tracking_password = kwargs["mlflow_tracking_password"]
-            mlflow_tracking_uri = kwargs["mlflow_tracking_uri"]
+        mlflow_tracking_uri = kwargs.get("mlflow_tracking_uri")
+        mlflow_tracking_username = kwargs.get("mlflow_tracking_username")
+        mlflow_tracking_password = kwargs.get("mlflow_tracking_password")
 
-            if mlflow_tracking_uri:
-                mlflow_agent = MLFlowAgent()
-                os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username
-                os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password
-                mlflow_agent.set_tracking_uri(mlflow_tracking_uri)
-                # TODO: test mlflow_agent is connected to mlflow server
-        except KeyError:
-            pass
+        if mlflow_tracking_uri:
+            mlflow_agent = MLFlowAgent()
+            os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username or ""
+            os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password or ""
+            mlflow_agent.set_tracking_uri(mlflow_tracking_uri)
+            # TODO: test mlflow_agent is connected to mlflow server
 
         try:
+            # Create the trainer
+            print("going to create trainer by trainer factory")
             cls._trainer = TrainerFactory.create_trainer(
                 trainer_type,
+                trainer_id=trainer_id,
                 criterion=criterion,
                 optimizer=optimizer,
-                device=torch.device(kwargs["device"]),
+                device=torch.device(kwargs.get("device", "cpu")),
                 mlflow_agent=mlflow_agent
             )
+            # Add the trainer to the store
             cls._trainer_store.add_trainer(trainer_id, cls._trainer)
         except Exception as e:
             print("Failed to init trainer")
+            print(e)
             return False
         return True
 
@@ -287,11 +292,12 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def run_ml_training(cls, epochs: int) -> bool:
+    def run_ml_training(cls, epochs: int, progress_callback=None) -> bool:
         """
         Once the data fetcher prepared and trainer is initialized
         Run the ml training process
         :param epochs: training epochs
+        :param progress_callback: callback function for progress updates
         :return: True if training is successful
         """
         # Check the data processor is ready
@@ -329,7 +335,7 @@ class MLTrainingServingApp:
 
         try:
             print(f"Training the model for {epochs} epochs")
-            cls._trainer.run_training_loop(epochs)
+            cls._trainer.run_training_loop(epochs, progress_callback=progress_callback)
             print("Training finished")
         except RuntimeError as re:
             print(f"RuntimeError during training: {re}")
@@ -355,6 +361,10 @@ class MLTrainingServingApp:
         :return: The trainer object if found, else None
         """
         return cls._trainer_store.get_trainer(trainer_id)
+
+    @classmethod
+    def get_trainer_details(cls, trainer_id: str) -> dict:
+        return cls._trainer_store.get_trainer_details(trainer_id)
 
     @classmethod
     def get_data_processor(cls, data_processor_id: str):

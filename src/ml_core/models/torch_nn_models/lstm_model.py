@@ -6,18 +6,30 @@ import torch.nn as nn
 
 class LSTMModel(BaseModel):
 
-    def __init__(self, input_size: int, hidden_size: int, output_size: int):
+    def __init__(self, input_size: int, hidden_layer_sizes: list, output_size: int):
         """
-        LSTM model
+        LSTM model with arbitrary number of layers
         :param input_size: The dimensionality of the input at each time step
-        :param hidden_size: The number of features in the hidden state h
+        :param hidden_layer_sizes: A list with the number of features in the hidden state h for each LSTM layer
         :param output_size: The dimensionality of the output at each time step
         """
         super(LSTMModel, self).__init__()
-        self.hidden_size = hidden_size
-        self.lstm1 = nn.LSTM(input_size, hidden_size, batch_first=True)
-        self.lstm2 = nn.LSTM(hidden_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
+
+        if not hidden_layer_sizes:
+            raise RuntimeError("hidden_layer_sizes must contain at least one layer size")
+
+        self.hidden_layer_sizes = hidden_layer_sizes
+        self.lstm_layers = nn.ModuleList()
+
+        # Create the first LSTM layer with the input size
+        self.lstm_layers.append(nn.LSTM(input_size, hidden_layer_sizes[0], batch_first=True))
+
+        # Create additional LSTM layers
+        for i in range(1, len(hidden_layer_sizes)):
+            self.lstm_layers.append(nn.LSTM(hidden_layer_sizes[i - 1], hidden_layer_sizes[i], batch_first=True))
+
+        # Fully connected layer
+        self.fc = nn.Linear(hidden_layer_sizes[-1], output_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -25,27 +37,22 @@ class LSTMModel(BaseModel):
         :param x: The input tensor
         :return: The output tensor after forward pass
         """
-        h0 = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
-        out, _ = self.lstm1(x, (h0, c0))
-        out, _ = self.lstm2(out, (h0, c0))
-        out = self.fc(out[:, -1, :])
+        for lstm_layer in self.lstm_layers:
+            h0 = torch.zeros(1, x.size(0), lstm_layer.hidden_size).to(x.device)
+            c0 = torch.zeros(1, x.size(0), lstm_layer.hidden_size).to(x.device)
+            x, _ = lstm_layer(x, (h0, c0))
+
+        out = self.fc(x[:, -1, :])
         return out
 
     def get_model_hyper_parameters(self) -> dict:
         """
-        get the model hyper-parameters
-        :return:
+        Get the model hyper-parameters
+        :return: Model hyper-parameters as a dictionary
         """
-
         model_hyper_parameters = {}
 
         for name, param in self.state_dict().items():
-            layer_type = name.split('.')[0]  # e.g., "conv1", "fc1", etc.
-            # if "fc" in layer_type or "conv" in layer_type:
-            # print(f"Layer: {name}, Shape: {param.shape}")
             model_hyper_parameters[name] = param.shape
 
         return model_hyper_parameters
-
-
