@@ -29,9 +29,6 @@ class MLTrainingServingApp:
     _model_store = src.store.model_store.get_model_store()
 
     _data_fetcher = None
-    _data_processor = None
-    _trainer = None
-
     _raw_pandas_dataframe = None
     _training_tensor = None
     _training_target_tensor = None
@@ -100,17 +97,17 @@ class MLTrainingServingApp:
             cls._raw_pandas_dataframe = dataframe
             print(f"DataFrame initialized: {dataframe.head()}")
             print(f"Received kwargs: {kwargs}")
-            cls._data_processor = DataProcessorFactory.create_data_processor(
+            data_processor = DataProcessorFactory.create_data_processor(
                 data_processor_type,
                 input_data=cls._raw_pandas_dataframe,
                 **kwargs
             )
-            print(f"Created data processor: {cls._data_processor}")
+            print(f"Created data processor: {data_processor}")
             cls._data_processor_store.add_data_processor(
                 data_processor_id=data_processor_id,
-                data_processor=cls._data_processor
+                data_processor=data_processor
             )
-            print(f"Data processor stored with ID: {data_processor_id} and details: {cls._data_processor}")
+            print(f"Data processor stored with ID: {data_processor_id} and details: {data_processor}")
         except Exception as e:
             print("Failed to init data processor from DataFrame")
             print(e)
@@ -149,7 +146,7 @@ class MLTrainingServingApp:
                     cls._raw_pandas_dataframe = cls._data_fetcher.get_as_dataframe()
 
         try:
-            cls._data_processor = DataProcessorFactory.create_data_processor(
+            data_processor = DataProcessorFactory.create_data_processor(
                 data_processor_type,
                 input_data=cls._raw_pandas_dataframe,
                 **kwargs
@@ -157,7 +154,7 @@ class MLTrainingServingApp:
             # Register the data processor to data processor manager
             cls._data_processor_store.add_data_processor(
                 data_processor_id=data_processor_id,
-                data_processor=cls._data_processor
+                data_processor=data_processor
             )
         except Exception as e:
             print("Failed to init data processor")
@@ -233,7 +230,7 @@ class MLTrainingServingApp:
         try:
             # Create the trainer
             print("going to create trainer by trainer factory")
-            cls._trainer = TrainerFactory.create_trainer(
+            trainer = TrainerFactory.create_trainer(
                 trainer_type,
                 trainer_id=trainer_id,
                 criterion=criterion,
@@ -242,7 +239,7 @@ class MLTrainingServingApp:
                 mlflow_agent=mlflow_agent
             )
             # Add the trainer to the store
-            cls._trainer_store.add_trainer(trainer_id, cls._trainer)
+            cls._trainer_store.add_trainer(trainer_id, trainer)
         except Exception as e:
             print("Failed to init trainer")
             print(e)
@@ -256,11 +253,12 @@ class MLTrainingServingApp:
         :param model_name: The model name to be used in MLflow tracking
         :return: True if model name is successfully set
         """
-        if cls._trainer is None:
+        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        if trainer is None:
             print("Trainer is not initialized")
             return False
 
-        cls._trainer.set_mlflow_model_name(model_name)
+        trainer.set_mlflow_model_name(model_name)
         return True
 
     @classmethod
@@ -270,11 +268,12 @@ class MLTrainingServingApp:
         :param experiment_name: The experiment name to be used in MLflow tracking
         :return: True if experiment name is successfully set
         """
-        if cls._trainer is None:
+        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        if trainer is None:
             print("Trainer is not initialized")
             return False
 
-        cls._trainer.set_mlflow_experiment_name(experiment_name)
+        trainer.set_mlflow_experiment_name(experiment_name)
         return True
 
     @classmethod
@@ -284,11 +283,12 @@ class MLTrainingServingApp:
         :param run_name: The run name to be used in MLflow tracking
         :return: True if run name is successfully set
         """
-        if cls._trainer is None:
+        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        if trainer is None:
             print("Trainer is not initialized")
             return False
 
-        cls._trainer.set_mlflow_run_name(run_name)
+        trainer.set_mlflow_run_name(run_name)
         return True
 
     @classmethod
@@ -301,14 +301,15 @@ class MLTrainingServingApp:
         :return: True if training is successful
         """
         # Check the data processor is ready
-        if cls._data_processor is None:
+        data_processor = cls._data_processor_store.get_data_processor(cls._data_processor_store.list_data_processors()[-1])
+        if data_processor is None:
             print("Data processor is not initialized")
             return False
 
-        cls._data_processor.preprocess_data()
+        data_processor.preprocess_data()
 
-        training_data = cls._data_processor.get_training_data_x()
-        training_target = cls._data_processor.get_training_target_y()
+        training_data = data_processor.get_training_data_x()
+        training_target = data_processor.get_training_target_y()
 
         print(f"Training data shape: {training_data.shape}")
         print(f"Training target shape: {training_target.shape}")
@@ -326,16 +327,17 @@ class MLTrainingServingApp:
             return False
 
         # Check the trainer is ready, model and training data is set
-        if cls._trainer is None:
+        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        if trainer is None:
             print("Trainer is not initialized")
             return False
         else:
-            cls._trainer.set_model(cls._model)
-            cls._trainer.set_training_data_loader(torch_dataloader)
+            trainer.set_model(cls._model)
+            trainer.set_training_data_loader(torch_dataloader)
 
         try:
             print(f"Training the model for {epochs} epochs")
-            cls._trainer.run_training_loop(epochs, progress_callback=progress_callback)
+            trainer.run_training_loop(epochs, progress_callback=progress_callback)
             print("Training finished")
         except RuntimeError as re:
             print(f"RuntimeError during training: {re}")
