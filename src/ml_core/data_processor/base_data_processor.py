@@ -87,7 +87,7 @@ class BaseDataProcessor(ABC):
         Serialize the BaseDataProcessor object to a dictionary.
         """
         return {
-            '_input_df': self._input_df.to_dict() if self._input_df is not None else None,
+            '_input_df': self._input_df.to_dict(orient='split') if self._input_df is not None else None,
             '_training_data_x': self._training_data_x.tolist() if self._training_data_x is not None else None,
             '_training_target_y': self._training_target_y.tolist() if self._training_target_y is not None else None,
             '_testing_data_x': self._testing_data_x.tolist() if self._testing_data_x is not None else None,

@@ -46,31 +46,46 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         self._training_window_size = training_window_size
         self._target_window_size = target_window_size
 
+        # Preprocess data if input_data is provided
+        if input_data is not None:
+            self.preprocess_data()
+
     def to_dict(self):
         """
         Serialize the TimeSeriesDataProcessor object to a dictionary.
         """
-        return {
+        data_dict = super().to_dict()
+        data_dict.update({
             'type': 'TimeSeriesDataProcessor',
             'extract_column': self._extract_column,
             'training_data_ratio': self._training_data_ratio,
             'training_window_size': self._training_window_size,
             'target_window_size': self._target_window_size,
-            # Add any other relevant attributes here
-        }
+        })
+        return data_dict
 
     @classmethod
     def from_dict(cls, data: dict):
         """
         Deserialize a dictionary to a TimeSeriesDataProcessor object.
         """
-        return cls(
+        instance = cls(
             extract_column=data.get('extract_column', []),
             training_data_ratio=data.get('training_data_ratio', 0.8),
             training_window_size=data.get('training_window_size', 60),
             target_window_size=data.get('target_window_size', 1),
-            input_data=None  # Set input_data to None or handle as needed
+            input_data=pd.DataFrame(data['_input_df']['data'], columns=data['_input_df']['columns']) if data['_input_df'] is not None else None
         )
+        instance._training_data_x = np.array(data['_training_data_x']) if data['_training_data_x'] is not None else None
+        instance._training_target_y = np.array(data['_training_target_y']) if data['_training_target_y'] is not None else None
+        instance._testing_data_x = np.array(data['_testing_data_x']) if data['_testing_data_x'] is not None else None
+        instance._testing_target_y = np.array(data['_testing_target_y']) if data['_testing_target_y'] is not None else None
+        instance._is_preprocessed = data['_is_preprocessed']
+        if instance._input_df is not None:
+            instance._scaler_by_column = {
+                col: MinMaxScaler().fit(np.array(instance._input_df[col]).reshape(-1, 1)) for col in instance._extract_column
+            }
+        return instance
 
     def __repr__(self):
         return (f"TimeSeriesDataProcessor("
@@ -81,8 +96,6 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
     def __str__(self):
         return self.__repr__()
-
-    # Other methods remain unchanged
 
     def _scaling_array(self):
         """

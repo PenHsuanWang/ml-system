@@ -166,7 +166,10 @@ def main():
     init_data_processor_response = post_request("ml_training_manager/init_data_processor_from_df", {
         "data_processor_id": "example_data_processor_id",
         "data_processor_type": "time_series",
-        "dataframe": dataframe_payload,
+        "dataframe": {
+            "data": df.to_dict(orient="records"),
+            "columns": df.columns.tolist()
+        },
         "kwargs": {
             "extract_column": ['Close', 'Volume'],
             "training_data_ratio": 0.6,
