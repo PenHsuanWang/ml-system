@@ -155,7 +155,7 @@ def main():
     example_set_mlflow_settings(MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD)
 
     # Step 1: Read local CSV file and convert to DataFrame
-    csv_file_path = "/Users/pwang/Developer/yfinance-stock-analyzer-lstm/data/raw_data/AAPL.csv"
+    csv_file_path = "/home/pwang/pwang-dev/ml-system/AAPL.csv"
     df = pd.read_csv(csv_file_path)
     dataframe_payload = {
         "data": df.to_dict(orient="records"),
@@ -179,13 +179,15 @@ def main():
     # Step 3: Initialize the model with multiple LSTM layers
     init_model_response = post_request("ml_training_manager/init_model", {
         "model_type": "lstm",
-        "model_id": "unique_model_id",  # Ensure model_id is included
+        "model_id": "unique_model_id",
+        "model_name": "unique_model_id",
         "kwargs": {
             "input_size": 2,
             "hidden_layer_sizes": [128, 64, 32],  # Specify multiple hidden layers
             "output_size": 1
         }
     })
+
     print(init_model_response)
 
     # Step 4: Initialize the trainer
@@ -195,7 +197,7 @@ def main():
         "kwargs": {
             "loss_function": "mse",
             "optimizer": "adam",
-            "learning_rate": 0.001,
+            "learning_rate": "0.001",  # Ensure learning_rate is a string
             "device": "cpu",
             "mlflow_tracking_uri": MLFLOW_TRACKING_URI,
             "mlflow_tracking_username": MLFLOW_TRACKING_USERNAME,
@@ -231,7 +233,7 @@ def main():
     example_get_data_processor("example_data_processor_id")
 
     # Step 13: Update trainer
-    example_update_trainer("unique_trainer_id", {"learning_rate": 0.002})
+    example_update_trainer("unique_trainer_id", {"learning_rate": "0.002"})
 
     # Step 14: Update data processor
     example_update_data_processor("example_data_processor_id", {"new_param": "new_value"})

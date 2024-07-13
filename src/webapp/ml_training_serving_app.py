@@ -253,7 +253,8 @@ class MLTrainingServingApp:
         :param model_name: The model name to be used in MLflow tracking
         :return: True if model name is successfully set
         """
-        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        trainer_id = cls._trainer_store.list_trainers()[-1]
+        trainer = cls._trainer_store.get_trainer(trainer_id)
         if trainer is None:
             print("Trainer is not initialized")
             return False
@@ -268,7 +269,8 @@ class MLTrainingServingApp:
         :param experiment_name: The experiment name to be used in MLflow tracking
         :return: True if experiment name is successfully set
         """
-        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        trainer_id = cls._trainer_store.list_trainers()[-1]
+        trainer = cls._trainer_store.get_trainer(trainer_id)
         if trainer is None:
             print("Trainer is not initialized")
             return False
@@ -283,7 +285,8 @@ class MLTrainingServingApp:
         :param run_name: The run name to be used in MLflow tracking
         :return: True if run name is successfully set
         """
-        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        trainer_id = cls._trainer_store.list_trainers()[-1]
+        trainer = cls._trainer_store.get_trainer(trainer_id)
         if trainer is None:
             print("Trainer is not initialized")
             return False
@@ -301,7 +304,8 @@ class MLTrainingServingApp:
         :return: True if training is successful
         """
         # Check the data processor is ready
-        data_processor = cls._data_processor_store.get_data_processor(cls._data_processor_store.list_data_processors()[-1])
+        data_processor_id = cls._data_processor_store.list_data_processors()[-1]
+        data_processor = cls._data_processor_store.get_data_processor(data_processor_id)
         if data_processor is None:
             print("Data processor is not initialized")
             return False
@@ -327,7 +331,8 @@ class MLTrainingServingApp:
             return False
 
         # Check the trainer is ready, model and training data is set
-        trainer = cls._trainer_store.get_trainer(cls._trainer_store.list_trainers()[-1])
+        trainer_id = cls._trainer_store.list_trainers()[-1]
+        trainer = cls._trainer_store.get_trainer(trainer_id)
         if trainer is None:
             print("Trainer is not initialized")
             return False

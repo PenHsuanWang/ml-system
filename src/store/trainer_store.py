@@ -52,5 +52,9 @@ class TrainerStore:
             return trainer.to_dict()
         return None
 
+    @classmethod
+    def list_trainers(cls) -> list:
+        return list(cls._trainer_store.keys())
+
 def get_trainer_store():
     return TrainerStore()
