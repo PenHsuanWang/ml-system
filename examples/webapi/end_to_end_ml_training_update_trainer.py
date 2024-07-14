@@ -59,11 +59,17 @@ def example_set_mlflow_run_name(run_name):
 # Run ML training
 def example_run_ml_training(epochs):
     try:
-        response = post_request(
-            "ml_training_manager/run_ml_training",
-            {"args": [], "kwargs": {"epochs": epochs}}
+        response = requests.post(
+            f"{BASE_URL}/ml_training_manager/run_ml_training",
+            json={"args": [], "kwargs": {"epochs": epochs}},
+            stream=True
         )
-        print(response)
+        if response.status_code != 200:
+            raise Exception(f"Failed to run ML training: {response.json()}")
+        
+        for line in response.iter_lines():
+            if line:
+                print(line.decode('utf-8'))
     except Exception as e:
         print(f"Failed to run ML training: {e}")
 
@@ -126,7 +132,7 @@ def example_update_trainer(trainer_id, new_params):
         {"params": new_params}
     )
     print(response)
-    print("Updated model configuration:", response.get("updated_trainer"))
+    print("Updated trainer configuration:", response.get("updated_trainer"))
 
 # Update data processor
 def example_update_data_processor(data_processor_id, new_params):

@@ -414,7 +414,9 @@ class MLTrainingServingApp:
 
     @classmethod
     def update_data_processor(cls, data_processor_id: str, data_processor_params: dict) -> bool:
+        print(f"Try to update data processor {data_processor_id}")
         data_processor = cls._data_processor_store.get_data_processor(data_processor_id)
+        print(f"data processor {data_processor}")
         if data_processor:
             for param, value in data_processor_params.items():
                 setattr(data_processor, param, value)

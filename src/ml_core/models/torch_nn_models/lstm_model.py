@@ -1,3 +1,4 @@
+# src/ml_core/models/torch_nn_models/lstm_model.py
 from src.ml_core.models.torch_nn_models.base_model import BaseModel
 
 import torch
@@ -56,3 +57,13 @@ class LSTMModel(BaseModel):
             model_hyper_parameters[name] = param.shape
 
         return model_hyper_parameters
+
+    def to_dict(self):
+        """
+        Serialize the LSTMModel object to a dictionary.
+        """
+        return {
+            'input_size': self.lstm_layers[0].input_size,
+            'hidden_layer_sizes': [layer.hidden_size for layer in self.lstm_layers],
+            'output_size': self.fc.out_features
+        }

@@ -332,6 +332,7 @@ async def run_ml_training(
         yield f"data: {json.dumps(update)}\n\n"
 
     async def training_task():
+        nonlocal epochs
         if not ml_trainer_app.run_ml_training(epochs, progress_callback=progress_callback):
             print("run_ml_training failed.")
             return JSONResponse(
@@ -339,10 +340,10 @@ async def run_ml_training(
                 content={"message": "Failed to run ML training"}
             )
         print("run_ml_training succeeded.")
-        return StreamingResponse(progress_callback(), media_type="text/event-stream")
+        return StreamingResponse(progress_callback(0, epochs, 0), media_type="text/event-stream")
 
     background_tasks.add_task(training_task)
-    return {"message": "ML training started in background"}
+    return JSONResponse(content={"message": "ML training started in background"})
 
 
 @router.get("/ml_training_manager/get_data_processor/{data_processor_id}")
@@ -494,7 +495,7 @@ def update_data_processor(
         success = ml_trainer_app.update_data_processor(data_processor_id, update_params)
         return {
             "message": f"Data processor {data_processor_id} updated successfully",
-            "updated_data_processor": ml_trainer_app.data_processor_store.get_data_processor(data_processor_id)
+            "updated_data_processor": ml_trainer_app.get_data_processor(data_processor_id)
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
