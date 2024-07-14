@@ -86,12 +86,21 @@ class BaseDataProcessor(ABC):
         """
         Serialize the BaseDataProcessor object to a dictionary.
         """
+        def convert_to_native(obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.generic):
+                return obj.item()
+            elif isinstance(obj, pd.DataFrame):
+                return obj.to_dict(orient='split')
+            return obj
+
         return {
-            '_input_df': self._input_df.to_dict(orient='split') if self._input_df is not None else None,
-            '_training_data_x': self._training_data_x.tolist() if self._training_data_x is not None else None,
-            '_training_target_y': self._training_target_y.tolist() if self._training_target_y is not None else None,
-            '_testing_data_x': self._testing_data_x.tolist() if self._testing_data_x is not None else None,
-            '_testing_target_y': self._testing_target_y.tolist() if self._testing_target_y is not None else None,
+            '_input_df': convert_to_native(self._input_df),
+            '_training_data_x': convert_to_native(self._training_data_x),
+            '_training_target_y': convert_to_native(self._training_target_y),
+            '_testing_data_x': convert_to_native(self._testing_data_x),
+            '_testing_target_y': convert_to_native(self._testing_target_y),
             '_is_preprocessed': self._is_preprocessed
         }
 

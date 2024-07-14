@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Body, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp
+from src.webapp.ml_training_serving_app import get_app, MLTrainingServingApp, jsonable_encoder
 import json
 
 # Definition of FastAPI router
@@ -481,7 +481,7 @@ def update_trainer(trainer_id: str, update_params: UpdateTrainerParams, ml_train
 @router.put("/ml_training_manager/update_data_processor/{data_processor_id}")
 def update_data_processor(
     data_processor_id: str,
-    update_params: dict,
+    update_params: UpdateDataProcessorParams,
     ml_trainer_app: MLTrainingServingApp = Depends(get_app)
 ):
     """
@@ -492,11 +492,14 @@ def update_data_processor(
     :return: JSONResponse
     """
     try:
-        success = ml_trainer_app.update_data_processor(data_processor_id, update_params)
-        return {
-            "message": f"Data processor {data_processor_id} updated successfully",
-            "updated_data_processor": ml_trainer_app.get_data_processor(data_processor_id)
-        }
+        success = ml_trainer_app.update_data_processor(data_processor_id, update_params.params)
+        updated_data_processor = ml_trainer_app.get_data_processor(data_processor_id)
+        return JSONResponse(
+            content={
+                "message": f"Data processor {data_processor_id} updated successfully",
+                "updated_data_processor": jsonable_encoder(updated_data_processor)
+            }
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

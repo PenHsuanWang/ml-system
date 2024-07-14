@@ -3,6 +3,7 @@ import mlflow
 import torch
 from torch.utils.data.dataloader import DataLoader
 import pandas as pd
+import numpy as np
 
 import src.webapp.data_io_serving_app
 import src.store.data_processor_store
@@ -371,7 +372,8 @@ class MLTrainingServingApp:
 
     @classmethod
     def get_trainer_details(cls, trainer_id: str) -> dict:
-        return cls._trainer_store.get_trainer_details(trainer_id)
+        trainer = cls._trainer_store.get_trainer(trainer_id)
+        return trainer.to_dict() if trainer else {}
 
     @classmethod
     def get_data_processor(cls, data_processor_id: str):
@@ -433,6 +435,21 @@ class MLTrainingServingApp:
                         f"Warning: Data shape changed from {original_shape} to {updated_shape} which may not be compatible with the model")
                 return True
         return False
+
+
+def jsonable_encoder(obj):
+    """
+    Custom jsonable encoder to handle numpy objects and other non-serializable types.
+    """
+    if isinstance(obj, np.generic):
+        return obj.item()
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, pd.DataFrame):
+        return obj.to_dict(orient='split')
+    elif hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    return str(obj)
 
 
 def get_app():
