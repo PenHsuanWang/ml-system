@@ -3,6 +3,7 @@ Developing the serving app to export model training setting to REST api endpoint
 """
 
 import os
+import asyncio
 
 from fastapi import APIRouter, Depends, Body, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -325,26 +326,22 @@ async def run_ml_training(
     epochs = request.epochs
 
     def progress_callback(epoch, total_epochs, loss):
-        update = {
-            "epoch": epoch,
-            "total_epochs": total_epochs,
-            "loss": loss
-        }
-        yield f"data: {json.dumps(update)}\n\n"
+        MLTrainingServingApp.update_progress(trainer_id, epoch, loss)
 
     async def training_task():
-        nonlocal epochs
         if not ml_trainer_app.run_ml_training(trainer_id, epochs, progress_callback=progress_callback):
             print("run_ml_training failed.")
+            MLTrainingServingApp.update_progress(trainer_id, 'finished', 0)
             return JSONResponse(
                 status_code=422,
                 content={"message": "Failed to run ML training"}
             )
         print("run_ml_training succeeded.")
-        return StreamingResponse(progress_callback(0, epochs, 0), media_type="text/event-stream")
+        MLTrainingServingApp.update_progress(trainer_id, 'finished', 0)
 
     background_tasks.add_task(training_task)
     return JSONResponse(content={"message": "ML training started in background"})
+
 
 
 @router.get("/ml_training_manager/trainers/{trainer_id}/progress")

@@ -471,7 +471,7 @@ class MLTrainingServingApp:
         return False
 
     @classmethod
-    def _update_progress(cls, trainer_id: str, epoch: int, loss: float):
+    def update_progress(cls, trainer_id: str, epoch: int, loss: float):
         """
         Update the training progress for the given trainer.
         :param trainer_id: The ID of the trainer.
@@ -479,7 +479,12 @@ class MLTrainingServingApp:
         :param loss: The current loss value.
         """
         with cls._lock:
+            if trainer_id not in cls._training_progress:
+                cls._training_progress[trainer_id] = {}
             cls._training_progress[trainer_id][epoch] = loss
+            # Update finished status when training completes
+            if epoch == 'finished':
+                cls._training_progress[trainer_id]['finished'] = True
 
 
 def jsonable_encoder(obj):
