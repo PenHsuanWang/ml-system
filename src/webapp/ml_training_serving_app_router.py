@@ -60,8 +60,8 @@ class InitTrainerBody(BaseModel):
 
 
 class RunMLTrainingBody(BaseModel):
-    args: list
-    kwargs: dict
+    trainer_id: str
+    epochs: int
 
 
 class SetMLflowModelNameBody(BaseModel):
@@ -321,7 +321,8 @@ async def run_ml_training(
     """
     print(f"Received run_ml_training request: {request}")
 
-    epochs = request.kwargs["epochs"]
+    trainer_id = request.trainer_id
+    epochs = request.epochs
 
     def progress_callback(epoch, total_epochs, loss):
         update = {
@@ -333,7 +334,7 @@ async def run_ml_training(
 
     async def training_task():
         nonlocal epochs
-        if not ml_trainer_app.run_ml_training(epochs, progress_callback=progress_callback):
+        if not ml_trainer_app.run_ml_training(trainer_id, epochs, progress_callback=progress_callback):
             print("run_ml_training failed.")
             return JSONResponse(
                 status_code=422,
@@ -353,11 +354,16 @@ async def get_training_progress(trainer_id: str):
     :param trainer_id: Trainer ID
     :return: StreamingResponse
     """
-    def generate():
-        for epoch in range(1, 101):
-            loss = 1 / epoch  # Mock loss calculation
-            yield f"data: {json.dumps({'epoch': epoch, 'loss': loss})}\n\n"
-        yield "data: {\"message\": \"Training finished\"}\n\n"
+    async def generate():
+        while True:
+            progress = MLTrainingServingApp._training_progress.get(trainer_id, {})
+            for epoch, loss in progress.items():
+                if epoch != 'finished':
+                    yield f"data: {json.dumps({'epoch': epoch, 'loss': loss})}\n\n"
+            if progress.get('finished', False):
+                yield "data: {\"message\": \"Training finished\"}\n\n"
+                break
+            await asyncio.sleep(1)  # Adjust the sleep time as needed
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

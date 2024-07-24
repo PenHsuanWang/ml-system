@@ -5,12 +5,14 @@ import os
 # Base URL of the FastAPI server
 BASE_URL = "http://localhost:8000"
 
+
 # Function to make POST requests to the API
 def post_request(endpoint, json_data):
     response = requests.post(f"{BASE_URL}/{endpoint}", json=json_data)
     if response.status_code != 200:
         raise Exception(f"Request to {endpoint} failed: {response.json()}")
     return response.json()
+
 
 # Function to make GET requests to the API
 def get_request(endpoint):
@@ -19,6 +21,7 @@ def get_request(endpoint):
         raise Exception(f"Request to {endpoint} failed: {response.json()}")
     return response.json()
 
+
 # Function to make PUT requests to the API
 def put_request(endpoint, json_data):
     response = requests.put(f"{BASE_URL}/{endpoint}", json=json_data)
@@ -26,11 +29,13 @@ def put_request(endpoint, json_data):
         raise Exception(f"Request to {endpoint} failed: {response.json()}")
     return response.json()
 
+
 # Set MLflow settings
 def example_set_mlflow_settings(mlflow_tracking_uri, mlflow_tracking_username, mlflow_tracking_password):
     os.environ['MLFLOW_TRACKING_URI'] = mlflow_tracking_uri
     os.environ['MLFLOW_TRACKING_USERNAME'] = mlflow_tracking_username
     os.environ['MLFLOW_TRACKING_PASSWORD'] = mlflow_tracking_password
+
 
 # Set MLflow model name
 def example_set_mlflow_model_name(model_name):
@@ -40,6 +45,7 @@ def example_set_mlflow_model_name(model_name):
     )
     print(response)
 
+
 # Set MLflow experiment name
 def example_set_mlflow_experiment_name(experiment_name):
     response = post_request(
@@ -47,6 +53,7 @@ def example_set_mlflow_experiment_name(experiment_name):
         {"experiment_name": experiment_name}
     )
     print(response)
+
 
 # Set MLflow run name
 def example_set_mlflow_run_name(run_name):
@@ -56,27 +63,30 @@ def example_set_mlflow_run_name(run_name):
     )
     print(response)
 
+
 # Run ML training
-def example_run_ml_training(epochs):
+def example_run_ml_training(trainer_id, epochs):
     try:
         response = requests.post(
             f"{BASE_URL}/ml_training_manager/run_ml_training",
-            json={"args": [], "kwargs": {"epochs": epochs}},
+            json={"trainer_id": trainer_id, "epochs": epochs},
             stream=True
         )
         if response.status_code != 200:
             raise Exception(f"Failed to run ML training: {response.json()}")
-        
+
         for line in response.iter_lines():
             if line:
                 print(line.decode('utf-8'))
     except Exception as e:
         print(f"Failed to run ML training: {e}")
 
+
 # Get MLflow models
 def example_get_mlflow_models():
     response = get_request("ml_training_manager/list_models")
     print(response)
+
 
 # Get MLflow model details
 def example_get_mlflow_model_details(model_id):
@@ -88,6 +98,7 @@ def example_get_mlflow_model_details(model_id):
     for param, value in parameters.items():
         print(f"  {param}: {value}")
 
+
 def example_get_trainer(trainer_id):
     response = get_request(f"ml_training_manager/get_trainer/{trainer_id}")
     print("Trainer Details:")
@@ -96,6 +107,7 @@ def example_get_trainer(trainer_id):
     print("Trainer Parameters:")
     for param, value in parameters.items():
         print(f"  {param}: {value}")
+
 
 def example_get_data_processor(data_processor_id):
     response = get_request(f"ml_training_manager/get_data_processor/{data_processor_id}")
@@ -106,15 +118,18 @@ def example_get_data_processor(data_processor_id):
     for param, value in parameters.items():
         print(f"  {param}: {value}")
 
+
 # List trainers
 def example_list_trainers():
     response = get_request("ml_training_manager/list_trainers")
     print(response)
 
+
 # List data processors
 def example_list_data_processors():
     response = get_request("ml_training_manager/list_data_processors")
     print(response)
+
 
 # Update model
 def example_update_model(model_id, new_params):
@@ -125,6 +140,7 @@ def example_update_model(model_id, new_params):
     print(response)
     print("Updated model configuration:", response.get("updated_model"))
 
+
 # Update trainer
 def example_update_trainer(trainer_id, new_params):
     response = put_request(
@@ -133,6 +149,7 @@ def example_update_trainer(trainer_id, new_params):
     )
     print(response)
     print("Updated trainer configuration:", response.get("updated_trainer"))
+
 
 # Update data processor
 def example_update_data_processor(data_processor_id, new_params):
@@ -147,6 +164,7 @@ def example_update_data_processor(data_processor_id, new_params):
         print(f"Updated data processor info: {data_processor_info}")
     except Exception as e:
         print(f"Failed to retrieve updated data processor: {e}")
+
 
 def main():
     TRAINING_WINDOW_SIZE = 60
@@ -225,7 +243,7 @@ def main():
     example_set_mlflow_run_name(RUN_NAME)
 
     # Step 8: Run ML training
-    example_run_ml_training(epochs=20)
+    example_run_ml_training(trainer_id="unique_trainer_id", epochs=20)
 
     # Step 9: List models
     example_get_mlflow_models()
@@ -251,7 +269,8 @@ def main():
     example_list_data_processors()
 
     # Step 16: Retrain using the updated trainer without re-initializing
-    example_run_ml_training(epochs=10)
+    example_run_ml_training(trainer_id="unique_trainer_id", epochs=10)
+
 
 if __name__ == "__main__":
     main()

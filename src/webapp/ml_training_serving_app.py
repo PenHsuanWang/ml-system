@@ -5,6 +5,7 @@ from torch.utils.data.dataloader import DataLoader
 import pandas as pd
 import numpy as np
 import json
+import threading
 
 import src.webapp.data_io_serving_app
 import src.store.data_processor_store
@@ -16,6 +17,7 @@ from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFact
 from src.ml_core.trainer.trainer import TrainerFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent, NullMLFlowAgent
 from fastapi.responses import StreamingResponse
+
 
 class MLTrainingServingApp:
     """
@@ -37,6 +39,8 @@ class MLTrainingServingApp:
     _testing_tensor = None
     _testing_target_tensor = None
     _model = None
+    _training_progress = {}
+    _lock = threading.Lock()
 
     def __init__(self):
         """
@@ -297,49 +301,78 @@ class MLTrainingServingApp:
         return True
 
     @classmethod
-    def run_ml_training(cls, epochs: int, progress_callback=None) -> bool:
+    def run_ml_training(cls, trainer_id: str, epochs: int, progress_callback=None) -> bool:
         """
-        Once the data fetcher prepared and trainer is initialized
-        Run the ml training process
-        :param epochs: training epochs
-        :param progress_callback: callback function for progress updates
-        :return: True if training is successful
+        Run the machine learning training process.
+        :param trainer_id: ID of the trainer to use for training.
+        :param epochs: Number of epochs to train the model.
+        :param progress_callback: Optional; callback for real-time updates.
+        :return: True if training is successful, False otherwise.
         """
-        # Check the data processor is ready
-        data_processor_id = cls._data_processor_store.list_data_processors()[-1]
-        data_processor = cls._data_processor_store.get_data_processor(data_processor_id)
-        if data_processor is None:
-            print("Data processor is not initialized")
-            return False
-
-        data_processor.preprocess_data()
-
-        training_data = data_processor.get_training_data_x()
-        training_target = data_processor.get_training_target_y()
-
-        print(f"Training data shape: {training_data.shape}")
-        print(f"Training target shape: {training_target.shape}")
-
-        time_series_dataset = TimeSeriesDataset(training_data, training_target)
-        torch_dataloader = DataLoader(
-            time_series_dataset,
-            batch_size=len(time_series_dataset),
-            shuffle=False
-        )
-
-        # Check the model is initialized
-        if cls._model is None:
-            print("Model is not initialized")
-            return False
-
-        # Check the trainer is ready, model and training data is set
-        trainer_id = cls._trainer_store.list_trainers()[-1]
+        # Try to fetch the trainer if a trainer_id is provided
         trainer = cls._trainer_store.get_trainer(trainer_id)
-        if trainer is None:
-            print("Trainer is not initialized")
-            return False
+
+        if not trainer:
+            # If no trainer is found, proceed with setting up a new trainer
+            data_processor_id = cls._data_processor_store.list_data_processors()[-1]
+            data_processor = cls._data_processor_store.get_data_processor(data_processor_id)
+            if data_processor is None:
+                print("Data processor is not initialized")
+                return False
+
+            data_processor.preprocess_data()
+            training_data = data_processor.get_training_data_x()
+            training_target = data_processor.get_training_target_y()
+
+            print(f"Training data shape: {training_data.shape}")
+            print(f"Training target shape: {training_target.shape}")
+
+            time_series_dataset = TimeSeriesDataset(training_data, training_target)
+            torch_dataloader = DataLoader(
+                time_series_dataset,
+                batch_size=len(time_series_dataset),
+                shuffle=False
+            )
+
+            # Check the model is initialized
+            if cls._model is None:
+                print("Model is not initialized")
+                return False
+
+            # Continue to use the last initialized trainer if no specific trainer_id is provided
+            last_trainer_id = cls._trainer_store.list_trainers()[-1]
+            trainer = cls._trainer_store.get_trainer(last_trainer_id)
+            if trainer is None:
+                print("Trainer is not initialized")
+                return False
+            else:
+                trainer.set_model(cls._model)
+                trainer.set_training_data_loader(torch_dataloader)
         else:
+            # If trainer is found, ensure it has the model and data loader set
+            if cls._model is None:
+                print("Model is not initialized")
+                return False
+
             trainer.set_model(cls._model)
+
+            data_processor_id = cls._data_processor_store.list_data_processors()[-1]
+            data_processor = cls._data_processor_store.get_data_processor(data_processor_id)
+            if data_processor is None:
+                print("Data processor is not initialized")
+                return False
+
+            data_processor.preprocess_data()
+            training_data = data_processor.get_training_data_x()
+            training_target = data_processor.get_training_target_y()
+
+            time_series_dataset = TimeSeriesDataset(training_data, training_target)
+            torch_dataloader = DataLoader(
+                time_series_dataset,
+                batch_size=len(time_series_dataset),
+                shuffle=False
+            )
+
             trainer.set_training_data_loader(torch_dataloader)
 
         try:
@@ -436,6 +469,17 @@ class MLTrainingServingApp:
                         f"Warning: Data shape changed from {original_shape} to {updated_shape} which may not be compatible with the model")
                 return True
         return False
+
+    @classmethod
+    def _update_progress(cls, trainer_id: str, epoch: int, loss: float):
+        """
+        Update the training progress for the given trainer.
+        :param trainer_id: The ID of the trainer.
+        :param epoch: The current epoch number.
+        :param loss: The current loss value.
+        """
+        with cls._lock:
+            cls._training_progress[trainer_id][epoch] = loss
 
 
 def jsonable_encoder(obj):
