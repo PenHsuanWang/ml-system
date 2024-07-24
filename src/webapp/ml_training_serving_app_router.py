@@ -346,6 +346,22 @@ async def run_ml_training(
     return JSONResponse(content={"message": "ML training started in background"})
 
 
+@router.get("/ml_training_manager/trainers/{trainer_id}/progress")
+async def get_training_progress(trainer_id: str):
+    """
+    Get training progress
+    :param trainer_id: Trainer ID
+    :return: StreamingResponse
+    """
+    def generate():
+        for epoch in range(1, 101):
+            loss = 1 / epoch  # Mock loss calculation
+            yield f"data: {json.dumps({'epoch': epoch, 'loss': loss})}\n\n"
+        yield "data: {\"message\": \"Training finished\"}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
 @router.get("/ml_training_manager/get_data_processor/{data_processor_id}")
 def get_data_processor(data_processor_id: str, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
     """
@@ -504,3 +520,4 @@ def update_data_processor(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

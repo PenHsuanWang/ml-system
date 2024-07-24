@@ -161,7 +161,7 @@ def main():
     example_set_mlflow_settings(MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD)
 
     # Step 1: Read local CSV file and convert to DataFrame
-    csv_file_path = "/home/pwang/pwang-dev/ml-system/AAPL.csv"
+    csv_file_path = "/Users/pwang/Developer/yfinance-stock-analyzer-lstm/data/raw_data/AAPL.csv"
     df = pd.read_csv(csv_file_path)
     dataframe_payload = {
         "data": df.to_dict(orient="records"),

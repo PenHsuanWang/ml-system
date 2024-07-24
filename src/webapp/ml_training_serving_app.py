@@ -4,6 +4,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 import pandas as pd
 import numpy as np
+import json
 
 import src.webapp.data_io_serving_app
 import src.store.data_processor_store
@@ -14,7 +15,7 @@ from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 from src.ml_core.trainer.trainer import TrainerFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent, NullMLFlowAgent
-
+from fastapi.responses import StreamingResponse
 
 class MLTrainingServingApp:
     """
@@ -447,8 +448,6 @@ def jsonable_encoder(obj):
         return obj.tolist()
     elif isinstance(obj, pd.DataFrame):
         return obj.to_dict(orient='split')
-    elif hasattr(obj, 'to_dict'):
-        return obj.to_dict()
     return str(obj)
 
 
