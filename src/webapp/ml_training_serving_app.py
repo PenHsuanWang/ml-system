@@ -486,6 +486,15 @@ class MLTrainingServingApp:
             if epoch == 'finished':
                 cls._training_progress[trainer_id]['finished'] = True
 
+    @classmethod
+    def remove_trainer(cls, trainer_id: str) -> bool:
+        """
+        Remove a trainer by ID
+        :param trainer_id: The ID of the trainer to remove
+        :return: True if trainer was successfully removed, False otherwise
+        """
+        return cls._trainer_store.remove_trainer(trainer_id)
+
 
 def jsonable_encoder(obj):
     """
@@ -503,3 +512,4 @@ def jsonable_encoder(obj):
 def get_app():
     app = MLTrainingServingApp()
     return app
+

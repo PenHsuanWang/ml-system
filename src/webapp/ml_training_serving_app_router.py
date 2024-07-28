@@ -524,3 +524,16 @@ def update_data_processor(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.delete("/ml_training_manager/delete_trainer/{trainer_id}")
+def delete_trainer(trainer_id: str, ml_trainer_app: MLTrainingServingApp = Depends(get_app)):
+    """
+    Delete trainer by ID
+    :param trainer_id: ID of the trainer to delete
+    :param ml_trainer_app: MLTrainingServingApp
+    :return: JSONResponse
+    """
+    if ml_trainer_app.remove_trainer(trainer_id):
+        return {"message": f"Trainer {trainer_id} deleted successfully"}
+    return JSONResponse(status_code=404, content={"message": "Trainer not found"})
+
