@@ -1,6 +1,4 @@
-"""
-Developing the serving app to export model training setting to REST api endpoint
-"""
+# src/webapp/ml_training_serving_app_router.py
 
 import os
 import asyncio
@@ -325,50 +323,28 @@ async def run_ml_training(
     trainer_id = request.trainer_id
     epochs = request.epochs
 
-    def progress_callback(epoch: int, total_epochs: int, loss: float):
-        """
-        Callback function to report progress during training
-        :param epoch: Current epoch number
-        :param total_epochs: Total number of epochs
-        :param loss: Loss value for the current epoch
-        """
-        print(f"Progress update - Epoch: {epoch}/{total_epochs}, Loss: {loss}")
-        MLTrainingServingApp.update_progress(trainer_id, epoch, loss)
+    # No need for a separate progress_callback here as it's handled internally
 
-    async def training_task():
+    def training_task():
         """
-        Background task to run ML training and handle progress updates
+        Background task to run ML training
         """
         try:
-            # Start the training process and pass the progress callback
-            if not ml_trainer_app.run_ml_training(trainer_id, epochs, progress_callback=progress_callback):
+            # Start the training process
+            if not ml_trainer_app.run_ml_training(trainer_id, epochs):
                 print("run_ml_training failed.")
-                # Update progress as 'finished' with zero loss on failure
+                # Update progress as 'error' on failure
                 MLTrainingServingApp.update_progress(trainer_id, 'error', 0)
-                return JSONResponse(
-                    status_code=422,
-                    content={"message": "Failed to run ML training"}
-                )
-
-            print("run_ml_training succeeded.")
-            # Update progress as 'finished' with zero loss on success
-            MLTrainingServingApp.update_progress(trainer_id, 'finished', 0)
-
         except Exception as e:
             print(f"Error during training: {str(e)}")
             # Update progress as 'error' if any exception occurs
             MLTrainingServingApp.update_progress(trainer_id, 'error', 0)
-            return JSONResponse(
-                status_code=500,
-                content={"message": f"Error during training: {str(e)}"}
-            )
 
     # Add the training task to run in the background
     background_tasks.add_task(training_task)
 
     # Return a response immediately while the background task runs
     return JSONResponse(content={"message": "ML training started in background"})
-
 
 
 @router.get("/ml_training_manager/trainers/{trainer_id}/progress")
@@ -382,10 +358,13 @@ async def get_training_progress(trainer_id: str):
         while True:
             progress = MLTrainingServingApp._training_progress.get(trainer_id, {})
             for epoch, loss in progress.items():
-                if epoch != 'finished':
+                if epoch != 'finished' and epoch != 'error':
                     yield f"data: {json.dumps({'epoch': epoch, 'loss': loss})}\n\n"
             if progress.get('finished', False):
                 yield "data: {\"message\": \"Training finished\"}\n\n"
+                break
+            if progress.get('error', False):
+                yield "data: {\"message\": \"Training error\"}\n\n"
                 break
             await asyncio.sleep(1)  # Adjust the sleep time as needed
 

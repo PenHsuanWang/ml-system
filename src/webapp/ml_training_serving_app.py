@@ -1,3 +1,5 @@
+# src/webapp/ml_training_serving_app.py
+
 import os
 import mlflow
 import torch
@@ -28,8 +30,6 @@ class MLTrainingServingApp:
     """
     A singleton class to serve the model training process
     provided the operation interface to client via REST api
-    1. operating the data fetcher by data_io_serving_app, another exported REST api to user to init the data fetcher.
-       provide the request body with information about fetch_data parameter
     """
 
     _data_io_serving_app = src.webapp.data_io_serving_app.get_app()
@@ -41,6 +41,7 @@ class MLTrainingServingApp:
     _raw_pandas_dataframe = None
     _training_progress = {}
     _lock = threading.Lock()
+    _model = None  # Added to keep track of the current model
 
     def __init__(self):
         """
@@ -366,13 +367,22 @@ class MLTrainingServingApp:
             trainer.set_training_data_loader(torch_dataloader)
 
             logger.info(f"Starting training for {epochs} epochs.")
-            trainer.run_training_loop(epochs, progress_callback=progress_callback)
+
+            # Define internal progress callback
+            def internal_progress_callback(epoch, total_epochs, loss):
+                cls.update_progress(trainer_id, epoch, loss)
+                if progress_callback:
+                    progress_callback(epoch, total_epochs, loss)
+
+            trainer.run_training_loop(epochs, progress_callback=internal_progress_callback)
             logger.info("Training finished successfully.")
         except Exception as e:
             logger.error(f"Exception during training: {e}", exc_info=True)
+            cls.update_progress(trainer_id, 'error', 0)
             return False
 
         cls._model.eval()
+        cls.update_progress(trainer_id, 'finished', 0)
         return True
 
     @classmethod
@@ -483,7 +493,7 @@ class MLTrainingServingApp:
             if trainer_id not in cls._training_progress:
                 cls._training_progress[trainer_id] = {}
             cls._training_progress[trainer_id][epoch] = loss
-            if epoch == 'finished':
+            if epoch == 'finished' or epoch == 'error':
                 cls._training_progress[trainer_id]['finished'] = True
 
     @classmethod
