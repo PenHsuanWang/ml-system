@@ -1,8 +1,11 @@
-# src/ml_core/trainers/torch_nn_trainer.py
 import time
 from torch.utils.data.dataloader import DataLoader
 from src.ml_core.trainer.base_trainer import BaseTrainer
 from src.model_ops_manager.mlflow_agent.mlflow_agent import NullMLFlowAgent
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class TorchNeuralNetworkTrainer(BaseTrainer):
@@ -152,6 +155,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
             # Add more data-related info if needed
         }
         self._mlflow_agent.log_params_many(training_data_info)
+        logger.debug(f"Logged training data info: {training_data_info}")
 
     def run_training_loop(self, epochs: int, progress_callback=None) -> None:
         """
@@ -164,6 +168,9 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
         if self._model is None:
             raise RuntimeError("Model is not provided.")
 
+        if self._training_data_loader is None:
+            raise RuntimeError("Training data loader is not provided.")
+
         self._mlflow_agent.start_run(
             experiment_name=self._mlflow_experiment_name,
             run_name=self._mlflow_run_name
@@ -173,12 +180,13 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
             # Log model hyperparameters
             model_hyper_parameters = self._model.get_model_hyper_parameters()
             self._mlflow_agent.log_params_many(model_hyper_parameters)
+            logger.debug(f"Logged model hyperparameters: {model_hyper_parameters}")
 
         if self._track_training_data_info:
             # Log training data info
             self.log_training_data_info()
 
-        print(f"Training the model for {epochs} epochs")
+        logger.info(f"Training the model for {epochs} epochs")
         self._model.train()
 
         try:
@@ -206,23 +214,28 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
 
                 avg_epoch_loss = epoch_loss / len(self._training_data_loader)
 
-                print(f"Epoch: {epoch+1}/{epochs}, Loss: {avg_epoch_loss}")
+                logger.info(f"Epoch: {epoch+1}/{epochs}, Loss: {avg_epoch_loss}")
 
                 # Callback for progress update
                 if progress_callback:
                     progress_callback(epoch + 1, epochs, avg_epoch_loss)
-
-            if self._track_model_architecture:
-                # Log model architecture
-                self._mlflow_agent.log_param("model_architecture", str(self._model))
-
-            # Register the model
-            self._mlflow_agent.register_model(self._model, self._mlflow_model_name)
-            print("Model registered with MLflow successfully.")
         except Exception as e:
-            print(f"Error during training loop or model registration: {e}")
+            logger.error(f"Error during training loop or model registration: {e}", exc_info=True)
             raise e
         finally:
-            self._mlflow_agent.end_run()
-            print("Training run ended.")
+            try:
+                if self._track_model_architecture:
+                    # Log model architecture
+                    self._mlflow_agent.log_param("model_architecture", str(self._model))
+                    logger.debug("Logged model architecture.")
 
+                # Register the model
+                logger.info(f"Registering the model {self._mlflow_model_name} to MLFlow server")
+                self._mlflow_agent.register_model(self._model, self._mlflow_model_name)
+                logger.info("Model registered with MLflow successfully.")
+            except Exception as e:
+                logger.error(f"Error during model registration: {e}", exc_info=True)
+                raise e
+            finally:
+                self._mlflow_agent.end_run()
+                logger.info("Training run ended.")

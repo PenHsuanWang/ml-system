@@ -1,8 +1,11 @@
-# src/ml_core/models/torch_nn_models/lstm_model.py
 from src.ml_core.models.torch_nn_models.base_model import BaseModel
 
 import torch
 import torch.nn as nn
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class LSTMModel(BaseModel):
@@ -19,6 +22,7 @@ class LSTMModel(BaseModel):
         if not hidden_layer_sizes:
             raise RuntimeError("hidden_layer_sizes must contain at least one layer size")
 
+        self.input_size = input_size  # Added input_size attribute
         self.hidden_layer_sizes = hidden_layer_sizes
         self.lstm_layers = nn.ModuleList()
 
@@ -51,11 +55,11 @@ class LSTMModel(BaseModel):
         Get the model hyper-parameters
         :return: Model hyper-parameters as a dictionary
         """
-        model_hyper_parameters = {}
-
-        for name, param in self.state_dict().items():
-            model_hyper_parameters[name] = param.shape
-
+        model_hyper_parameters = {
+            "input_size": self.input_size,
+            "hidden_layer_sizes": self.hidden_layer_sizes,
+            "output_size": self.fc.out_features
+        }
         return model_hyper_parameters
 
     def to_dict(self):
@@ -63,7 +67,7 @@ class LSTMModel(BaseModel):
         Serialize the LSTMModel object to a dictionary.
         """
         return {
-            'input_size': self.lstm_layers[0].input_size,
-            'hidden_layer_sizes': [layer.hidden_size for layer in self.lstm_layers],
+            'input_size': self.input_size,
+            'hidden_layer_sizes': self.hidden_layer_sizes,
             'output_size': self.fc.out_features
         }

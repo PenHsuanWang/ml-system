@@ -314,32 +314,59 @@ async def run_ml_training(
         background_tasks: BackgroundTasks = None
 ):
     """
-    Run ml training
-    :param ml_trainer_app: MLTrainingServingApp
-    :param request: RunMLTrainingBody
-    :param background_tasks: FastAPI BackgroundTasks for real-time updates
-    :return: JSONResponse
+    Run machine learning training asynchronously in the background
+    :param ml_trainer_app: Instance of MLTrainingServingApp
+    :param request: RunMLTrainingBody containing trainer_id and epochs
+    :param background_tasks: BackgroundTasks to handle background operations
+    :return: JSONResponse indicating that the training has started in the background
     """
     print(f"Received run_ml_training request: {request}")
 
     trainer_id = request.trainer_id
     epochs = request.epochs
 
-    def progress_callback(epoch, total_epochs, loss):
+    def progress_callback(epoch: int, total_epochs: int, loss: float):
+        """
+        Callback function to report progress during training
+        :param epoch: Current epoch number
+        :param total_epochs: Total number of epochs
+        :param loss: Loss value for the current epoch
+        """
+        print(f"Progress update - Epoch: {epoch}/{total_epochs}, Loss: {loss}")
         MLTrainingServingApp.update_progress(trainer_id, epoch, loss)
 
     async def training_task():
-        if not ml_trainer_app.run_ml_training(trainer_id, epochs, progress_callback=progress_callback):
-            print("run_ml_training failed.")
-            MLTrainingServingApp.update_progress(trainer_id, 'finished', 0)
-            return JSONResponse(
-                status_code=422,
-                content={"message": "Failed to run ML training"}
-            )
-        print("run_ml_training succeeded.")
-        MLTrainingServingApp.update_progress(trainer_id, 'finished', 0)
+        """
+        Background task to run ML training and handle progress updates
+        """
+        try:
+            # Start the training process and pass the progress callback
+            if not ml_trainer_app.run_ml_training(trainer_id, epochs, progress_callback=progress_callback):
+                print("run_ml_training failed.")
+                # Update progress as 'finished' with zero loss on failure
+                MLTrainingServingApp.update_progress(trainer_id, 'error', 0)
+                return JSONResponse(
+                    status_code=422,
+                    content={"message": "Failed to run ML training"}
+                )
 
+            print("run_ml_training succeeded.")
+            # Update progress as 'finished' with zero loss on success
+            MLTrainingServingApp.update_progress(trainer_id, 'finished', 0)
+
+        except Exception as e:
+            print(f"Error during training: {str(e)}")
+            # Update progress as 'error' if any exception occurs
+            MLTrainingServingApp.update_progress(trainer_id, 'error', 0)
+            return JSONResponse(
+                status_code=500,
+                content={"message": f"Error during training: {str(e)}"}
+            )
+
+    # Add the training task to run in the background
     background_tasks.add_task(training_task)
+
+    # Return a response immediately while the background task runs
     return JSONResponse(content={"message": "ML training started in background"})
 
 
