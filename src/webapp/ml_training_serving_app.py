@@ -19,7 +19,7 @@ from src.ml_core.data_loader.base_dataset import TimeSeriesDataset
 from src.ml_core.models.torch_nn_models.model import TorchNeuralNetworkModelFactory
 from src.ml_core.trainer.trainer import TrainerFactory
 from src.model_ops_manager.mlflow_agent.mlflow_agent import MLFlowAgent, NullMLFlowAgent
-from fastapi.responses import StreamingResponse
+from typing import Optional, Union
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -41,7 +41,7 @@ class MLTrainingServingApp:
     _raw_pandas_dataframe = None
     _training_progress = {}
     _lock = threading.Lock()
-    _model = None  # Added to keep track of the current model
+    _model = None  # To keep track of the current model
 
     def __init__(self):
         """
@@ -337,7 +337,7 @@ class MLTrainingServingApp:
                 logger.error("Data processor is not initialized.")
                 return False
 
-            data_processor.preprocess_data(force=True)  # Force reprocessing to ensure latest data
+            data_processor.preprocess_data(force=True)
             training_data = data_processor.get_training_data_x()
             training_target = data_processor.get_training_target_y()
 
@@ -371,18 +371,23 @@ class MLTrainingServingApp:
             # Define internal progress callback
             def internal_progress_callback(epoch, total_epochs, loss):
                 cls.update_progress(trainer_id, epoch, loss)
+                logger.info(f"Epoch [{epoch}/{total_epochs}], Loss: {loss}")
                 if progress_callback:
                     progress_callback(epoch, total_epochs, loss)
 
             trainer.run_training_loop(epochs, progress_callback=internal_progress_callback)
             logger.info("Training finished successfully.")
+
+            # Save final metrics
+            final_loss = trainer.get_last_loss()
+            cls.update_progress(trainer_id, 'finished', final_loss)
+
         except Exception as e:
             logger.error(f"Exception during training: {e}", exc_info=True)
-            cls.update_progress(trainer_id, 'error', 0)
+            cls.update_progress(trainer_id, 'error')
             return False
 
         cls._model.eval()
-        cls.update_progress(trainer_id, 'finished', 0)
         return True
 
     @classmethod
@@ -482,19 +487,23 @@ class MLTrainingServingApp:
         return False
 
     @classmethod
-    def update_progress(cls, trainer_id: str, epoch: int, loss: float):
+    def update_progress(cls, trainer_id: str, epoch: Union[int, str], loss: Optional[float] = None):
         """
         Update the training progress for the given trainer.
         :param trainer_id: The ID of the trainer.
-        :param epoch: The current epoch number.
-        :param loss: The current loss value.
+        :param epoch: The current epoch number or status ('finished', 'error').
+        :param loss: The current loss value, None for 'finished' or 'error'.
         """
         with cls._lock:
             if trainer_id not in cls._training_progress:
                 cls._training_progress[trainer_id] = {}
-            cls._training_progress[trainer_id][epoch] = loss
-            if epoch == 'finished' or epoch == 'error':
+            if isinstance(epoch, int):
+                cls._training_progress[trainer_id][epoch] = loss
+            elif epoch == 'finished':
                 cls._training_progress[trainer_id]['finished'] = True
+                cls._training_progress[trainer_id]['final_loss'] = loss  # Store final loss
+            elif epoch == 'error':
+                cls._training_progress[trainer_id]['error'] = True
 
     @classmethod
     def remove_trainer(cls, trainer_id: str) -> bool:
