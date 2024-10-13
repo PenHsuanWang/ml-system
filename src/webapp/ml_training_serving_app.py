@@ -368,18 +368,22 @@ class MLTrainingServingApp:
 
             logger.info(f"Starting training for {epochs} epochs.")
 
+            final_loss = None  # Initialize final_loss
+
             # Define internal progress callback
             def internal_progress_callback(epoch, total_epochs, loss):
                 cls.update_progress(trainer_id, epoch, loss)
                 logger.info(f"Epoch [{epoch}/{total_epochs}], Loss: {loss}")
                 if progress_callback:
                     progress_callback(epoch, total_epochs, loss)
+                if epoch == total_epochs:
+                    nonlocal final_loss
+                    final_loss = loss  # Store the final loss
 
             trainer.run_training_loop(epochs, progress_callback=internal_progress_callback)
             logger.info("Training finished successfully.")
 
             # Save final metrics
-            final_loss = trainer.get_last_loss()
             cls.update_progress(trainer_id, 'finished', final_loss)
 
         except Exception as e:

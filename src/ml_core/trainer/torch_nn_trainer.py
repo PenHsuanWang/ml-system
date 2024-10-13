@@ -215,6 +215,7 @@ class TorchNeuralNetworkTrainer(BaseTrainer):
                 avg_epoch_loss = epoch_loss / len(self._training_data_loader)
 
                 logger.info(f"Epoch: {epoch+1}/{epochs}, Loss: {avg_epoch_loss}")
+                print(f"Epoch: {epoch+1}/{epochs}, Loss: {avg_epoch_loss}")
 
                 # Callback for progress update
                 if progress_callback:
