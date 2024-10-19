@@ -2,6 +2,11 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from src.ml_core.data_processor.base_data_processor import BaseDataProcessor
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
 
 class TimeSeriesDataProcessor(BaseDataProcessor):
     """
@@ -46,31 +51,46 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         self._training_window_size = training_window_size
         self._target_window_size = target_window_size
 
+        # Preprocess data if input_data is provided
+        if input_data is not None:
+            self.preprocess_data()
+
     def to_dict(self):
         """
         Serialize the TimeSeriesDataProcessor object to a dictionary.
         """
-        return {
+        data_dict = super().to_dict()
+        data_dict.update({
             'type': 'TimeSeriesDataProcessor',
             'extract_column': self._extract_column,
             'training_data_ratio': self._training_data_ratio,
             'training_window_size': self._training_window_size,
             'target_window_size': self._target_window_size,
-            # Add any other relevant attributes here
-        }
+        })
+        return data_dict
 
     @classmethod
     def from_dict(cls, data: dict):
         """
         Deserialize a dictionary to a TimeSeriesDataProcessor object.
         """
-        return cls(
+        instance = cls(
             extract_column=data.get('extract_column', []),
             training_data_ratio=data.get('training_data_ratio', 0.8),
             training_window_size=data.get('training_window_size', 60),
             target_window_size=data.get('target_window_size', 1),
-            input_data=None  # Set input_data to None or handle as needed
+            input_data=pd.DataFrame(data['_input_df']['data'], columns=data['_input_df']['columns']) if data['_input_df'] is not None else None
         )
+        instance._training_data_x = np.array(data['_training_data_x']) if data['_training_data_x'] is not None else None
+        instance._training_target_y = np.array(data['_training_target_y']) if data['_training_target_y'] is not None else None
+        instance._testing_data_x = np.array(data['_testing_data_x']) if data['_testing_data_x'] is not None else None
+        instance._testing_target_y = np.array(data['_testing_target_y']) if data['_testing_target_y'] is not None else None
+        instance._is_preprocessed = data['_is_preprocessed']
+        if instance._input_df is not None:
+            instance._scaler_by_column = {
+                col: MinMaxScaler().fit(np.array(instance._input_df[col]).reshape(-1, 1)) for col in instance._extract_column
+            }
+        return instance
 
     def __repr__(self):
         return (f"TimeSeriesDataProcessor("
@@ -81,8 +101,6 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
 
     def __str__(self):
         return self.__repr__()
-
-    # Other methods remain unchanged
 
     def _scaling_array(self):
         """
@@ -99,22 +117,20 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         the training data ratio to be 1 is acceptable. return empty testing set.
         :return:
         """
-        self._training_array = self._extract_data_as_numpy_array[
-                               :int(self._training_data_ratio * len(self._extract_data_as_numpy_array))
-                               ]
-        self._testing_array = self._extract_data_as_numpy_array[
-                                int(self._training_data_ratio * len(self._extract_data_as_numpy_array)) - self._training_window_size:
-                              ]
+        data_length = len(self._extract_data_as_numpy_array)
+        split_index = int(self._training_data_ratio * data_length)
+        self._training_array = self._extract_data_as_numpy_array[:split_index]
+        self._testing_array = self._extract_data_as_numpy_array[split_index - self._training_window_size:]
+
+        logger.debug(f"Data split into training and testing sets at index {split_index}.")
+        logger.debug(f"Training array shape: {self._training_array.shape}")
+        logger.debug(f"Testing array shape: {self._testing_array.shape}")
 
     def _preprocessing(self):
         """
-        Support the extraction of column data as numpy array has been implemented.
-        splitting training and test data has been implemented as well.
         Now implement the padding and sliding window to build the training and testing set.
-        to make all model training material ready.
         :return:
         """
-
         # check the training window size and target window size is valid.
         if len(self._training_array) - self._target_window_size < self._training_window_size:
             raise ValueError("Training window size is too large.")
@@ -135,13 +151,17 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
             # if the testing set is empty, set the testing set to None. by pass to reshape the testing set.
             pass
 
-        # convert the numpy array to pytorch tensor.
-        # assign the tensor to object field.
+        # assign the numpy arrays to object fields.
         self._training_data_x = x_train
         self._training_target_y = y_train
 
         self._testing_data_x = x_test
         self._testing_target_y = y_test
+
+        logger.debug(f"Training data X shape: {self._training_data_x.shape}")
+        logger.debug(f"Training target Y shape: {self._training_target_y.shape}")
+        logger.debug(f"Testing data X shape: {self._testing_data_x.shape}")
+        logger.debug(f"Testing target Y shape: {self._testing_target_y.shape}")
 
     def _extract_training_data_and_scale(self) -> None:
         """
@@ -152,19 +172,26 @@ class TimeSeriesDataProcessor(BaseDataProcessor):
         if len(self._extract_column) == 0:
             raise ValueError("Extract column is not provided.")
 
+        self._extract_data_as_numpy_array = None
+
         for i_column in self._extract_column:
-            extract_column_series = self._input_df[i_column].values
-            if extract_column_series is None:
-                raise ValueError(f"Please check the column {i_column} exist in the input data!")
-            extract_column_series = extract_column_series.reshape(-1, 1)
+            if i_column not in self._input_df.columns:
+                raise ValueError(f"Column '{i_column}' does not exist in input data.")
+
+            extract_column_series = self._input_df[i_column].values.reshape(-1, 1)
             scaler = MinMaxScaler()
             scaler.fit(extract_column_series)
             self._scaler_by_column[i_column] = scaler
             extract_column_series = scaler.transform(extract_column_series)
+
             if self._extract_data_as_numpy_array is None:
                 self._extract_data_as_numpy_array = extract_column_series
             else:
-                self._extract_data_as_numpy_array = np.concatenate((self._extract_data_as_numpy_array, extract_column_series), axis=1)
+                self._extract_data_as_numpy_array = np.concatenate(
+                    (self._extract_data_as_numpy_array, extract_column_series), axis=1
+                )
+
+        logger.debug(f"Extracted and scaled data shape: {self._extract_data_as_numpy_array.shape}")
 
     def _sliding_window_mask(self, input_array: np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
