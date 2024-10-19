@@ -79,6 +79,14 @@ class DataProcessStore:
             return True
         return False
 
+    @classmethod
+    def list_data_processors(cls) -> list:
+        """
+        List all data processor IDs in the data processor store
+        :return: A list of data processor IDs
+        """
+        return list(cls._data_processor_store.keys())
+
 def get_store():
     """
     Get the data process manager object in singleton pattern

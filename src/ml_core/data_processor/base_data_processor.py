@@ -1,18 +1,19 @@
-from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
+from abc import ABC, abstractmethod
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class BaseDataProcessor(ABC):
     """
-    Abstract base class for all data processors.
+    Base class for data processor
     """
-
-    def __init__(self, input_data):
+    def __init__(self, input_data=None):
         """
-        The data processor is designed as an operator to provide data transformation.
-        The input data is a pandas dataframe, and the output data after desired transformation is a numpy array.
-        :param input_data: the input data is a pandas dataframe.
+        :param input_data: pandas dataframe
         """
         self._input_df = input_data
         self._training_data_x = None
@@ -21,24 +22,33 @@ class BaseDataProcessor(ABC):
         self._testing_target_y = None
         self._is_preprocessed = False
 
-    def set_input_df(self, input_data: pd.DataFrame):
+    def set_input_data(self, input_data: pd.DataFrame):
+        """
+        Set the input data
+        :param input_data: pandas dataframe
+        :return:
+        """
         self._input_df = input_data
         self._is_preprocessed = False
+        logger.debug("Input data set. Marked as not preprocessed.")
 
-    def preprocess_data(self):
-        """A high-level method that preprocesses the data."""
-
-        if self._is_preprocessed:
-            print("Data has already been preprocessed. Skipping preprocessing.")
+    def preprocess_data(self, force=False):
+        """
+        A high-level method that preprocesses the data.
+        """
+        if self._is_preprocessed and not force:
+            logger.info("Data has already been preprocessed. Skipping preprocessing.")
             return
 
         if self._input_df is None:
             raise RuntimeError("Input data is not provided.")
 
+        logger.info("Starting data preprocessing.")
         self._scaling_array()
         self._splitting()
         self._preprocessing()
         self._is_preprocessed = True
+        logger.info("Data preprocessing completed.")
 
     @abstractmethod
     def _scaling_array(self):
@@ -86,12 +96,21 @@ class BaseDataProcessor(ABC):
         """
         Serialize the BaseDataProcessor object to a dictionary.
         """
+        def convert_to_native(obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.generic):
+                return obj.item()
+            elif isinstance(obj, pd.DataFrame):
+                return obj.to_dict(orient='split')
+            return obj
+
         return {
-            '_input_df': self._input_df.to_dict() if self._input_df is not None else None,
-            '_training_data_x': self._training_data_x.tolist() if self._training_data_x is not None else None,
-            '_training_target_y': self._training_target_y.tolist() if self._training_target_y is not None else None,
-            '_testing_data_x': self._testing_data_x.tolist() if self._testing_data_x is not None else None,
-            '_testing_target_y': self._testing_target_y.tolist() if self._testing_target_y is not None else None,
+            '_input_df': convert_to_native(self._input_df),
+            '_training_data_x': convert_to_native(self._training_data_x),
+            '_training_target_y': convert_to_native(self._training_target_y),
+            '_testing_data_x': convert_to_native(self._testing_data_x),
+            '_testing_target_y': convert_to_native(self._testing_target_y),
             '_is_preprocessed': self._is_preprocessed
         }
 
